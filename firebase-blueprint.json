@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Dokumen transaksi pengeluaran belanja bahan baku katering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID unik transaksi" },
+        "date": { "type": "string", "description": "Tanggal pembelian YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Waktu pembelian HH:mm" },
+        "item": { "type": "string", "maxLength": 200, "description": "Nama bahan baku atau produk belanja" },
+        "description": { "type": "string", "maxLength": 500, "description": "Keterangan detail belanja atau peruntukan menu" },
+        "category": { "type": "string", "description": "Kategori bahan pangan" },
+        "supplier": { "type": "string", "maxLength": 200, "description": "Nama toko atau supplier" },
+        "status": { "type": "string", "description": "Status pelunasan nota (Lunas/Tempo)" },
+        "amount": { "type": "number", "description": "Nominal total dalam Rupiah" },
+        "qty": { "type": "string", "maxLength": 100, "description": "Jumlah dan satuan pembelian" },
+        "invoiceNumber": { "type": "string", "maxLength": 100, "description": "Nomor faktur / invoice nota" },
+        "notes": { "type": "string", "maxLength": 500, "description": "Catatan tambahan operasional dapur" },
+        "createdAt": { "type": "string", "description": "Waktu pembuatan record" }
+      },
+      "required": ["item", "category", "supplier", "amount", "date", "status"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Data mitra toko dan supplier katering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID supplier" },
+        "name": { "type": "string", "maxLength": 200, "description": "Nama supplier" },
+        "category": { "type": "string", "maxLength": 200, "description": "Kategori produk yang disuplai" },
+        "phone": { "type": "string", "maxLength": 50, "description": "Nomor kontak telepon atau WhatsApp" },
+        "address": { "type": "string", "maxLength": 300, "description": "Alamat los/toko" },
+        "rating": { "type": "number", "description": "Rating reputasi supplier" },
+        "totalSpent": { "type": "number", "description": "Akumulasi total belanja" },
+        "transactionCount": { "type": "number", "description": "Total transaksi belanja" }
+      },
+      "required": ["name", "phone"]
+    },
+    "IngredientBenchmark": {
+      "title": "IngredientBenchmark",
+      "description": "Data patokan harga pasar bahan baku katering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID bahan" },
+        "name": { "type": "string", "maxLength": 200, "description": "Nama bahan pangan" },
+        "category": { "type": "string", "description": "Kategori bahan" },
+        "currentPrice": { "type": "number", "description": "Harga terkini per unit" },
+        "previousPrice": { "type": "number", "description": "Harga sebelumnya per unit" },
+        "unit": { "type": "string", "maxLength": 50, "description": "Satuan unit (kg, liter, pcs)" },
+        "marketTrend": { "type": "string", "description": "Tren pasar: up, down, stable" },
+        "lastUpdated": { "type": "string", "description": "Tanggal update harga pasar" },
+        "note": { "type": "string", "maxLength": 500, "description": "Catatan kondisi pasar" }
+      },
+      "required": ["name", "currentPrice", "unit"]
+    }
+  },
+  "firestore": {
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Koleksi transaksi belanja bahan baku katering aktif"
+    },
+    "/trash/{trashId}": {
+      "schema": "Transaction",
+      "description": "Koleksi nota belanja katering yang dipindahkan ke arsip/sampah"
+    },
+    "/suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "Koleksi data profil mitra supplier katering"
+    },
+    "/ingredients/{ingredientId}": {
+      "schema": "IngredientBenchmark",
+      "description": "Koleksi data benchmark harga bahan pasar"
+    }
+  }
+}

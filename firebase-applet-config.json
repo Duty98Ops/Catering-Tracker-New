@@ -1,0 +1,11 @@
+{
+  "projectId": "catering-expense-tracker",
+  "appId": "1:58525816352:web:c110aa12d7c0d1d3a78e45",
+  "apiKey": "AIzaSyDvdDvxSqWOf59bd6-hWtq7Bf4Qtn3PseM",
+  "authDomain": "catering-expense-tracker.firebaseapp.com",
+  "databaseURL": "https://catering-expense-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  "storageBucket": "catering-expense-tracker.firebasestorage.app",
+  "messagingSenderId": "58525816352",
+  "measurementId": "G-X21YS77SR5",
+  "firestoreDatabaseId": "(default)"
+}

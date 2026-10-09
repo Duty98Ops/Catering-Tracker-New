@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Users,
   Store,
@@ -8,12 +8,58 @@ import {
   ExternalLink,
   Plus,
   Coins,
-  Receipt
+  Receipt,
+  X,
+  CheckCircle2
 } from 'lucide-react';
-import { INITIAL_SUPPLIERS } from '../../data/initialData';
+import { Supplier } from '../../types';
 import { formatRupiah } from '../../utils/formatters';
 
-export const SuppliersView: React.FC = () => {
+interface SuppliersViewProps {
+  suppliers: Supplier[];
+  onAddSupplier?: (sup: Supplier) => Promise<void>;
+}
+
+export const SuppliersView: React.FC<SuppliersViewProps> = ({
+  suppliers,
+  onAddSupplier,
+}) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [rating, setRating] = useState('4.8');
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) {
+      alert('Nama supplier dan nomor telepon wajib diisi.');
+      return;
+    }
+
+    const newSup: Supplier = {
+      id: `SUP-${Date.now()}`,
+      name: name.trim(),
+      category: category.trim() || 'Bahan Pangan Katering',
+      phone: phone.trim(),
+      address: address.trim() || 'Pasar Tradisional / Los Mitra',
+      rating: parseFloat(rating) || 4.8,
+      totalSpent: 0,
+      transactionCount: 0,
+    };
+
+    if (onAddSupplier) {
+      await onAddSupplier(newSup);
+    }
+
+    setName('');
+    setCategory('');
+    setPhone('');
+    setAddress('');
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
@@ -24,17 +70,17 @@ export const SuppliersView: React.FC = () => {
               Mitra Supplier Bahan Baku
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-              {INITIAL_SUPPLIERS.length} Mitra Aktif
+              {suppliers.length} Mitra di Firestore
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Daftar pasar tradisional, agen daging, toko bumbu, dan distributor resmi katering
+            Daftar pasar tradisional, agen daging, toko bumbu, dan distributor katering tersimpan di database
           </p>
         </div>
 
         <button
-          onClick={() => alert('Fitur tambah vendor supplier baru siap digunakan!')}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors self-start md:self-auto"
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors self-start md:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>+ Tambah Mitra Baru</span>
@@ -43,7 +89,7 @@ export const SuppliersView: React.FC = () => {
 
       {/* Grid Suppliers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
-        {INITIAL_SUPPLIERS.map((supplier) => (
+        {suppliers.map((supplier) => (
           <div
             key={supplier.id}
             className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
@@ -119,6 +165,79 @@ export const SuppliersView: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Modal Tambah Supplier */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-bold text-slate-900">Tambah Mitra Supplier Baru</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nama Toko / Supplier *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Toko Sayur Segar Jaya"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Kategori Produk</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Sayur, Daging, Bumbu"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nomor Telepon / WhatsApp *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="+62 812-..."
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Alamat Pasar / Kios</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Pasar Induk Los B-2"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl font-semibold text-slate-600"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
+                >
+                  Simpan ke Firestore
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

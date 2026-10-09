@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTransaction(data) {
+      return data.item is string && data.item.size() > 0 && data.item.size() <= 200
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 100
+        && data.supplier is string && data.supplier.size() > 0 && data.supplier.size() <= 200
+        && data.status is string && data.status.size() > 0 && data.status.size() <= 50
+        && data.amount is number && data.amount >= 0
+        && data.date is string && data.date.size() > 0 && data.date.size() <= 20
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('qty' in data) || (data.qty is string && data.qty.size() <= 100))
+        && (!('time' in data) || (data.time is string && data.time.size() <= 20))
+        && (!('invoiceNumber' in data) || (data.invoiceNumber is string && data.invoiceNumber.size() <= 100))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidSupplier(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 50
+        && (!('category' in data) || (data.category is string && data.category.size() <= 200))
+        && (!('address' in data) || (data.address is string && data.address.size() <= 300))
+        && (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5))
+        && (!('totalSpent' in data) || (data.totalSpent is number && data.totalSpent >= 0))
+        && (!('transactionCount' in data) || (data.transactionCount is number && data.transactionCount >= 0));
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Transactions Collection
+    match /transactions/{transactionId} {
+      allow get, list: if true;
+      allow create: if isValidId(transactionId) && isValidTransaction(incoming());
+      allow update: if isValidId(transactionId) && isValidTransaction(incoming());
+      allow delete: if isValidId(transactionId);
+    }
+
+    // Trash / Archive Collection
+    match /trash/{trashId} {
+      allow get, list: if true;
+      allow create: if isValidId(trashId) && isValidTransaction(incoming());
+      allow update: if isValidId(trashId) && isValidTransaction(incoming());
+      allow delete: if isValidId(trashId);
+    }
+
+    // Suppliers Collection
+    match /suppliers/{supplierId} {
+      allow get, list: if true;
+      allow create: if isValidId(supplierId) && isValidSupplier(incoming());
+      allow update: if isValidId(supplierId) && isValidSupplier(incoming());
+      allow delete: if isValidId(supplierId);
+    }
+
+    // Ingredient Benchmarks Collection
+    match /ingredients/{ingredientId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(ingredientId);
+    }
+  }
+}

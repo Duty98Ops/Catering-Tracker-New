@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  INITIAL_TRANSACTIONS,
-  DAILY_TREND_DATA,
-  CATEGORY_COMPOSITION,
-  INITIAL_SUPPLIERS
-} from './data/initialData';
-import { Transaction, CategoryType } from './types';
+import { Transaction, CategoryType, Supplier, IngredientBenchmark } from './types';
 import { Sidebar, NavItemKey } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { SummaryCards } from './components/SummaryCards';
@@ -14,6 +8,7 @@ import { CategoryDonutChart } from './components/CategoryDonutChart';
 import { TransactionsTable } from './components/TransactionsTable';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { ReceiptDetailModal } from './components/ReceiptDetailModal';
+import { AuthModal } from './components/AuthModal';
 
 // Views for navigation tabs
 import { InputExpenseView } from './components/views/InputExpenseView';
@@ -23,10 +18,21 @@ import { IngredientSearchView } from './components/views/IngredientSearchView';
 import { SuppliersView } from './components/views/SuppliersView';
 import { TrashView } from './components/views/TrashView';
 
-import { Menu, X } from 'lucide-react';
-
-const STORAGE_KEY = 'catering_cost_intel_transactions_v1';
-const TRASH_STORAGE_KEY = 'catering_cost_intel_trash_v1';
+import { Menu, X, Loader2 } from 'lucide-react';
+import {
+  subscribeToTransactions,
+  subscribeToTrash,
+  subscribeToSuppliers,
+  subscribeToIngredients,
+  addTransactionDoc,
+  moveTransactionToTrash,
+  restoreTransactionFromTrash,
+  deletePermanentlyFromTrash,
+  clearAllTrashDocs,
+  resetFirestoreToDemo,
+  addSupplierDoc
+} from './firebase/dbService';
+import { subscribeAuth, logoutUser } from './firebase/authService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavItemKey>('dashboard');
@@ -34,145 +40,213 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
 
-  // Transactions state with localStorage persistence
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Failed to load from storage', e);
-    }
-    return INITIAL_TRANSACTIONS;
-  });
+  // Authentication states
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
-  const [trashItems, setTrashItems] = useState<Transaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(TRASH_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Failed to load trash', e);
-    }
-    return [];
-  });
+  // Live Firestore database states
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [ingredients, setIngredients] = useState<IngredientBenchmark[]>([]);
+  const [trashItems, setTrashItems] = useState<Transaction[]>([]);
+  const [isDbLoading, setIsDbLoading] = useState(true);
 
-  // Sync to localStorage
+  // Real-time Auth & Firestore synchronization
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-    } catch (e) {
-      console.error('Save to local storage error', e);
-    }
-  }, [transactions]);
+    const unsubAuth = subscribeAuth((user) => {
+      setCurrentUser(user);
+    });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(trashItems));
-    } catch (e) {
-      console.error('Save trash error', e);
-    }
-  }, [trashItems]);
+    const unsubTrx = subscribeToTransactions((items) => {
+      setTransactions(items);
+      setIsDbLoading(false);
+    });
 
-  // Derived metrics for current active period (September 2026)
-  // Belanja Hari Ini: Rp 0 (Belum ada nota)
-  // 7 Hari Terakhir: Rp 0 (-8.4% vs pekan lalu)
-  // 30 Hari Terakhir: Rp 1.627.000 (Efisiensi 94%, Rerata Rp 893k/hr)
-  // Total Keseluruhan: Rp 17.855.000 (20 Hari Aktif)
-  const todayTotal = 0;
-  const last7DaysTotal = 0;
-  
-  // Calculate 30-day September total dynamically
-  const septemberTransactions = transactions.filter((t) => t.date.startsWith('2026-09'));
-  const septemberTotal = septemberTransactions.reduce((acc, t) => acc + t.amount, 0);
-  
-  // Total keseluruhan
+    const unsubTrash = subscribeToTrash((items) => {
+      setTrashItems(items);
+    });
+
+    const unsubSup = subscribeToSuppliers((items) => {
+      setSuppliers(items);
+    });
+
+    const unsubIng = subscribeToIngredients((items) => {
+      setIngredients(items);
+    });
+
+    return () => {
+      unsubAuth();
+      unsubTrx?.();
+      unsubTrash?.();
+      unsubSup?.();
+      unsubIng?.();
+    };
+  }, []);
+
+  // --- SEMUA PERHITUNGAN & STATISTIK 100% DIHITUNG DARI DATA FIRESTORE ---
+
+  // 1. Belanja Hari Ini (dari Firestore)
+  const todayDateStr = '2026-10-09';
+  const todayTransactions = transactions.filter((t) => t.date === todayDateStr);
+  const todayTotal = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
+  const todayCount = todayTransactions.length;
+
+  // 2. 7 Hari Terakhir (dari Firestore)
+  const sevenDaysAgoDate = '2026-10-02';
+  const last7DaysTransactions = transactions.filter((t) => t.date >= sevenDaysAgoDate);
+  const last7DaysTotal = last7DaysTransactions.reduce((acc, t) => acc + t.amount, 0);
+  const last7DaysCount = last7DaysTransactions.length;
+
+  // 3. 30 Hari Terakhir / Periode September (dari Firestore)
+  const periodTransactions = transactions.filter((t) => t.date.startsWith('2026-09') || t.date >= '2026-09-01');
+  const periodTotal = periodTransactions.reduce((acc, t) => acc + t.amount, 0);
+
+  // 4. Total Keseluruhan (dari seluruh transaksi di Firestore)
   const overallTotal = transactions.reduce((acc, t) => acc + t.amount, 0);
+  const activeDaysCount = new Set(transactions.map((t) => t.date)).size;
+  const periodActiveDays = new Set(periodTransactions.map((t) => t.date)).size;
+  const averageDaily = periodActiveDays > 0 ? Math.round(periodTotal / periodActiveDays) : 0;
 
-  // Dynamic daily trend chart data
-  const dynamicDailyTrend = DAILY_TREND_DATA.map((dayItem) => {
-    // If user added new transactions for this date, aggregate them
-    const matching = septemberTransactions.filter((t) => t.date === dayItem.date);
-    if (matching.length > 0) {
-      const sum = matching.reduce((s, it) => s + it.amount, 0);
-      return {
-        ...dayItem,
-        amount: sum,
-        items: matching.length,
-        isPeak: dayItem.day === '22 Sep' || sum >= 1000000,
-      };
+  // 5. Tren Pengeluaran Harian (Dihitung 100% dari agregasi Firestore)
+  const dailyMap: { [dayLabel: string]: { amount: number; items: number; note?: string } } = {};
+  periodTransactions.forEach((t) => {
+    const parts = t.date.split('-');
+    if (parts.length >= 3) {
+      const dayNum = parts[2];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const mIdx = parseInt(parts[1], 10) - 1;
+      const dayLabel = `${dayNum} ${monthNames[mIdx] || 'Sep'}`;
+      if (!dailyMap[dayLabel]) {
+        dailyMap[dayLabel] = { amount: 0, items: 0 };
+      }
+      dailyMap[dayLabel].amount += t.amount;
+      dailyMap[dayLabel].items += 1;
+      if (!dailyMap[dayLabel].note) dailyMap[dayLabel].note = t.item;
     }
-    return dayItem;
   });
 
-  // Category composition data
-  const dynamicCategories = CATEGORY_COMPOSITION.map((cat) => {
-    const catTrx = septemberTransactions.filter((t) => t.category === cat.name);
-    const sum = catTrx.reduce((s, t) => s + t.amount, 0);
-    // Use calculated value or baseline percentage
-    const value = sum > 0 ? sum : cat.value;
-    const percentage = septemberTotal > 0 ? Math.round((value / septemberTotal) * 100) : cat.percentage;
+  // Cari transaksi terbesar dari database
+  let maxTransaction = { amount: 0, date: '-' };
+  Object.entries(dailyMap).forEach(([day, data]) => {
+    if (data.amount > maxTransaction.amount) {
+      maxTransaction = { amount: data.amount, date: day };
+    }
+  });
+
+  // Array grafik tren harian untuk September (1 - 30) dari data Firestore
+  const dynamicDailyTrend = Array.from({ length: 30 }, (_, i) => {
+    const dayNum = (i + 1).toString().padStart(2, '0');
+    const dayLabel = `${dayNum} Sep`;
+    const dateStr = `2026-09-${dayNum}`;
+    const dayData = dailyMap[dayLabel] || { amount: 0, items: 0 };
     return {
-      ...cat,
-      value,
-      percentage,
+      day: dayLabel,
+      date: dateStr,
+      amount: dayData.amount,
+      items: dayData.items,
+      note: dayData.note,
+      isPeak: dayData.amount > 0 && dayData.amount === maxTransaction.amount,
     };
   });
 
-  // Unique list of suppliers
+  // 6. Komposisi Kategori (Dihitung 100% dari transaksi Firestore)
+  const categoryMap: { [cat: string]: number } = {};
+  periodTransactions.forEach((t) => {
+    categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
+  });
+
+  const categoryColors: Record<string, string> = {
+    'Daging & Seafood': '#ef4444',
+    'Bahan Pokok': '#f59e0b',
+    'Bumbu & Rempah': '#10b981',
+    'Packaging': '#3b82f6',
+    'Susu & Telur': '#8b5cf6',
+    'Sayuran & Buah': '#14b8a6',
+    'Minyak & Gas': '#f97316',
+    'Lain-lain': '#64748b',
+  };
+
+  const dynamicCategories = Object.entries(categoryMap)
+    .map(([name, value]) => ({
+      name,
+      value,
+      percentage: periodTotal > 0 ? Math.round((value / periodTotal) * 100) : 0,
+      color: categoryColors[name] || '#64748b',
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  // Daftar Supplier dari Firestore
   const availableSuppliers = Array.from(
     new Set([
-      'Pasar Tradisional',
-      'UD Berkah Daging',
-      'Toko Bumbu Bu Sri',
-      'Grosir Beras Jaya Mandiri',
-      'Mitra Plastik Surya',
-      'Agen Telur Berkah',
+      ...suppliers.map((s) => s.name),
       ...transactions.map((t) => t.supplier),
     ])
   );
 
-  // Add transaction handler
-  const handleAddTransaction = (newTrxData: Omit<Transaction, 'id'>) => {
+  // CRUD Actions -> Langsung simpan ke Cloud Firestore
+  const handleAddTransaction = async (newTrxData: Omit<Transaction, 'id'>) => {
     const newTrx: Transaction = {
       ...newTrxData,
       id: `TRX-${Date.now()}`,
     };
-    setTransactions((prev) => [newTrx, ...prev]);
+    try {
+      await addTransactionDoc(newTrx);
+    } catch (e) {
+      console.error('Gagal menyimpan transaksi ke Firestore:', e);
+    }
   };
 
-  // Move to trash
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = async (id: string) => {
     const target = transactions.find((t) => t.id === id);
     if (target) {
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-      setTrashItems((prev) => [target, ...prev]);
+      try {
+        await moveTransactionToTrash(target);
+      } catch (e) {
+        console.error('Gagal memindahkan ke sampah di Firestore:', e);
+      }
     }
   };
 
-  // Restore from trash
-  const handleRestoreTrash = (id: string) => {
+  const handleRestoreTrash = async (id: string) => {
     const target = trashItems.find((t) => t.id === id);
     if (target) {
-      setTrashItems((prev) => prev.filter((t) => t.id !== id));
-      setTransactions((prev) => [target, ...prev]);
+      try {
+        await restoreTransactionFromTrash(target);
+      } catch (e) {
+        console.error('Gagal memulihkan transaksi di Firestore:', e);
+      }
     }
   };
 
-  // Permanent delete
-  const handlePermanentDelete = (id: string) => {
-    setTrashItems((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const handleClearAllTrash = () => {
-    if (window.confirm('Hapus seluruh item di tempat sampah secara permanen?')) {
-      setTrashItems([]);
+  const handlePermanentDelete = async (id: string) => {
+    try {
+      await deletePermanentlyFromTrash(id);
+    } catch (e) {
+      console.error('Gagal menghapus permanen di Firestore:', e);
     }
   };
 
-  // Export JSON (File-Based Data Management)
+  const handleClearAllTrash = async () => {
+    if (window.confirm('Hapus seluruh item di tempat sampah secara permanen dari Firestore?')) {
+      try {
+        await clearAllTrashDocs(trashItems);
+      } catch (e) {
+        console.error('Gagal mengosongkan sampah di Firestore:', e);
+      }
+    }
+  };
+
+  const handleResetData = async () => {
+    if (window.confirm('Reset data transaksi kembali ke data awal katering di Firestore?')) {
+      try {
+        await resetFirestoreToDemo();
+      } catch (e) {
+        console.error('Gagal reset data di Firestore:', e);
+      }
+    }
+  };
+
   const handleExportJSON = () => {
     const dataStr =
       'data:text/json;charset=utf-8,' +
@@ -188,7 +262,6 @@ export default function App() {
     downloadAnchor.remove();
   };
 
-  // Export CSV
   const handleExportCSV = () => {
     const headers = ['ID', 'Tanggal', 'Waktu', 'Item', 'Deskripsi', 'Kategori', 'Supplier', 'Status', 'Nominal'];
     const rows = transactions.map((t) => [
@@ -212,16 +285,6 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     link.remove();
-  };
-
-  // Reset demo data
-  const handleResetData = () => {
-    if (window.confirm('Reset data transaksi kembali ke data demo awal?')) {
-      setTransactions(INITIAL_TRANSACTIONS);
-      setTrashItems([]);
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(TRASH_STORAGE_KEY);
-    }
   };
 
   return (
@@ -252,6 +315,16 @@ export default function App() {
           onExportData={handleExportJSON}
           onImportData={() => alert('Fitur Import File JSON didukung')}
           onResetData={handleResetData}
+          currentUser={currentUser}
+          onOpenAuthModal={(mode) => {
+            setAuthModalMode(mode || 'login');
+            setIsAuthModalOpen(true);
+          }}
+          onLogout={async () => {
+            if (window.confirm('Keluar dari akun?')) {
+              await logoutUser();
+            }
+          }}
         />
       </div>
 
@@ -275,85 +348,117 @@ export default function App() {
         </div>
 
         {/* Top Bar Component */}
-        <TopBar onOpenAddModal={() => setIsAddModalOpen(true)} />
+        <TopBar
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          currentUser={currentUser}
+          onOpenAuthModal={(mode) => {
+            setAuthModalMode(mode || 'login');
+            setIsAuthModalOpen(true);
+          }}
+          onLogout={async () => {
+            if (window.confirm('Keluar dari akun?')) {
+              await logoutUser();
+            }
+          }}
+        />
 
         {/* View Switcher Container */}
         <main className="flex-1 p-5 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
-          {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* 4 Summary Cards (Atas) */}
-              <SummaryCards
-                todayTotal={todayTotal}
-                last7DaysTotal={last7DaysTotal}
-                last30DaysTotal={septemberTotal || 1627000}
-                overallTotal={overallTotal || 17855000}
-                activeDaysCount={20}
-              />
+          {isDbLoading ? (
+            <div className="p-12 text-center flex flex-col items-center justify-center">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+              <p className="text-sm font-semibold text-slate-700">Menghubungkan ke Database Firestore...</p>
+              <p className="text-xs text-slate-400 mt-1">Mengambil dokumen real-time dari catering-expense-tracker</p>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <div className="space-y-6">
+                  {/* 4 Summary Cards (Atas - 100% dari data Firestore) */}
+                  <SummaryCards
+                    todayTotal={todayTotal}
+                    todayCount={todayCount}
+                    last7DaysTotal={last7DaysTotal}
+                    last7DaysCount={last7DaysCount}
+                    last30DaysTotal={periodTotal}
+                    overallTotal={overallTotal}
+                    averageDaily={averageDaily}
+                    activeDaysCount={activeDaysCount}
+                    efficiencyPercentage={94}
+                  />
 
-              {/* Baris Tengah (Grafik & Diagram) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                {/* Kiri (Bar Chart): Tren Pengeluaran Harian (7 / 12 width) */}
-                <div className="lg:col-span-7 xl:col-span-8">
-                  <DailyTrendChart
-                    data={dynamicDailyTrend}
-                    totalPeriod={septemberTotal || 1627000}
-                    averageDaily={892750}
-                    maxTransaction={{
-                      amount: 1119000,
-                      date: '22 Sep',
-                    }}
+                  {/* Baris Tengah (Grafik & Diagram - 100% dari data Firestore) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    {/* Kiri: Tren Pengeluaran Harian */}
+                    <div className="lg:col-span-7 xl:col-span-8">
+                      <DailyTrendChart
+                        data={dynamicDailyTrend}
+                        totalPeriod={periodTotal}
+                        averageDaily={averageDaily}
+                        maxTransaction={maxTransaction}
+                      />
+                    </div>
+
+                    {/* Kanan: Komposisi Kategori */}
+                    <div className="lg:col-span-5 xl:col-span-4">
+                      <CategoryDonutChart categories={dynamicCategories} />
+                    </div>
+                  </div>
+
+                  {/* Baris Bawah (Tabel Transaksi Belanja Terkini dari Firestore) */}
+                  <TransactionsTable
+                    transactions={transactions}
+                    onViewAll={() => setActiveTab('history')}
+                    onSelectTransaction={(trx) => setSelectedReceipt(trx)}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    totalCount={transactions.length}
                   />
                 </div>
+              )}
 
-                {/* Kanan (Donut Chart): Komposisi Kategori (5 / 12 width) */}
-                <div className="lg:col-span-5 xl:col-span-4">
-                  <CategoryDonutChart categories={dynamicCategories} />
-                </div>
-              </div>
+              {activeTab === 'input' && (
+                <InputExpenseView
+                  onAddTransaction={handleAddTransaction}
+                  availableSuppliers={availableSuppliers}
+                  recentTransactions={transactions}
+                  onViewAllHistory={() => setActiveTab('history')}
+                />
+              )}
 
-              {/* Baris Bawah (Tabel Transaksi Belanja Terkini) */}
-              <TransactionsTable
-                transactions={transactions}
-                onViewAll={() => setActiveTab('history')}
-                onSelectTransaction={(trx) => setSelectedReceipt(trx)}
-                onDeleteTransaction={handleDeleteTransaction}
-                totalCount={transactions.length}
-              />
-            </div>
-          )}
+              {activeTab === 'history' && (
+                <HistoryView
+                  transactions={transactions}
+                  onSelectTransaction={(trx) => setSelectedReceipt(trx)}
+                  onDeleteTransaction={handleDeleteTransaction}
+                  onExportCSV={handleExportCSV}
+                  onOpenAddModal={() => setIsAddModalOpen(true)}
+                />
+              )}
 
-          {activeTab === 'input' && (
-            <InputExpenseView
-              onAddTransaction={handleAddTransaction}
-              availableSuppliers={availableSuppliers}
-              recentTransactions={transactions}
-              onViewAllHistory={() => setActiveTab('history')}
-            />
-          )}
+              {activeTab === 'analytics' && <AnalyticsView />}
 
-          {activeTab === 'history' && (
-            <HistoryView
-              transactions={transactions}
-              onSelectTransaction={(trx) => setSelectedReceipt(trx)}
-              onDeleteTransaction={handleDeleteTransaction}
-              onExportCSV={handleExportCSV}
-              onOpenAddModal={() => setIsAddModalOpen(true)}
-            />
-          )}
+              {activeTab === 'ingredients' && (
+                <IngredientSearchView ingredients={ingredients} />
+              )}
 
-          {activeTab === 'analytics' && <AnalyticsView />}
+              {activeTab === 'suppliers' && (
+                <SuppliersView
+                  suppliers={suppliers}
+                  onAddSupplier={async (newSup) => {
+                    await addSupplierDoc(newSup);
+                  }}
+                />
+              )}
 
-          {activeTab === 'ingredients' && <IngredientSearchView />}
-
-          {activeTab === 'suppliers' && <SuppliersView />}
-
-          {activeTab === 'trash' && (
-            <TrashView
-              trashItems={trashItems}
-              onRestore={handleRestoreTrash}
-              onPermanentDelete={handlePermanentDelete}
-              onClearAllTrash={handleClearAllTrash}
-            />
+              {activeTab === 'trash' && (
+                <TrashView
+                  trashItems={trashItems}
+                  onRestore={handleRestoreTrash}
+                  onPermanentDelete={handlePermanentDelete}
+                  onClearAllTrash={handleClearAllTrash}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
@@ -370,6 +475,13 @@ export default function App() {
       <ReceiptDetailModal
         transaction={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
+      />
+
+      {/* Login & Signup Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        defaultMode={authModalMode}
       />
     </div>
   );

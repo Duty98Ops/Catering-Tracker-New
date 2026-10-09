@@ -12,15 +12,20 @@ import {
   Sparkles,
   RefreshCw
 } from 'lucide-react';
-import { INGREDIENT_BENCHMARKS } from '../../data/initialData';
 import { formatRupiah, getCategoryBadgeStyle } from '../../utils/formatters';
-import { CategoryType } from '../../types';
+import { CategoryType, IngredientBenchmark } from '../../types';
 
-export const IngredientSearchView: React.FC = () => {
+interface IngredientSearchViewProps {
+  ingredients: IngredientBenchmark[];
+}
+
+export const IngredientSearchView: React.FC<IngredientSearchViewProps> = ({
+  ingredients,
+}) => {
   const [query, setQuery] = useState('');
   const [selectedCat, setSelectedCat] = useState<string>('all');
 
-  const filtered = INGREDIENT_BENCHMARKS.filter((item) => {
+  const filtered = ingredients.filter((item) => {
     const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase());
     const matchesCat = selectedCat === 'all' || item.category === selectedCat;
     return matchesQuery && matchesCat;

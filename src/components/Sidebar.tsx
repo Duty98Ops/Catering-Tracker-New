@@ -14,7 +14,10 @@ import {
   RefreshCw,
   CheckCircle2,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  LogIn,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 
 export type NavItemKey =
@@ -35,6 +38,9 @@ interface SidebarProps {
   onExportData: () => void;
   onImportData: () => void;
   onResetData: () => void;
+  currentUser: any;
+  onOpenAuthModal: (mode?: 'login' | 'signup') => void;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,6 +52,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExportData,
   onImportData,
   onResetData,
+  currentUser,
+  onOpenAuthModal,
+  onLogout,
 }) => {
   const menuItems = [
     {
@@ -173,19 +182,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Bottom Card: File-Based Data Management - MVP V1.0 */}
+      {/* Bottom Card: Firebase Cloud Data Management */}
       <div className="p-3 border-t border-slate-800/80 bg-slate-950/80">
         <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 shadow-inner">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <Database className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-xs font-semibold text-slate-200 leading-tight">
-                  File-Based Data Management
+                  Firebase Cloud Storage
                 </h4>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">MVP V1.0 • JSON Storage</p>
+                <p className="text-[10px] text-amber-400/90 font-mono mt-0.5">Firestore Database • Live</p>
               </div>
             </div>
           </div>
@@ -193,10 +202,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="mt-2.5 pt-2 border-t border-slate-800/70 flex items-center justify-between text-[11px] text-slate-400">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Lokal Sinkron
+              Cloud Sinkron
             </span>
             <span className="font-mono text-[10px] text-slate-400">
-              {transactionCount} Data
+              {transactionCount} Dokumen
             </span>
           </div>
 
@@ -223,15 +232,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* User profile footer */}
         <div className="mt-3 pt-2.5 flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold ring-1 ring-white/20">
-              BP
+          {currentUser ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || 'User'}
+                    className="w-7 h-7 rounded-full object-cover ring-1 ring-white/20"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[11px] font-bold ring-1 ring-white/20">
+                    {(currentUser.displayName || currentUser.email || 'U').slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="overflow-hidden min-w-0">
+                  <p className="text-xs font-semibold text-slate-200 truncate">
+                    {currentUser.displayName || currentUser.email?.split('@')[0] || 'User Katering'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    {currentUser.email || 'Terautentikasi'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onLogout}
+                title="Keluar dari akun"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-900 transition-colors ml-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-medium text-slate-200 truncate">Bagus Prihantoro</p>
-              <p className="text-[10px] text-slate-400 truncate">Purchasing & Operational</p>
-            </div>
-          </div>
+          ) : (
+            <button
+              onClick={() => onOpenAuthModal('login')}
+              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Masuk / Daftar Akun</span>
+            </button>
+          )}
         </div>
       </div>
     </aside>
