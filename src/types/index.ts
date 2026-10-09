@@ -15,6 +15,7 @@ export type PaymentStatus =
 
 export interface Transaction {
   id: string;
+  userId?: string; // 'guest' atau user.uid
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   item: string;
@@ -32,6 +33,7 @@ export interface Transaction {
 
 export interface Supplier {
   id: string;
+  userId?: string; // 'guest' atau user.uid
   name: string;
   category: string;
   phone: string;

@@ -8,9 +8,9 @@ import { CategoryDonutChart } from './components/CategoryDonutChart';
 import { TransactionsTable } from './components/TransactionsTable';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { ReceiptDetailModal } from './components/ReceiptDetailModal';
-import { AuthModal } from './components/AuthModal';
 
-// Views for navigation tabs
+// Views for navigation tabs & Auth Page
+import { AuthPageView } from './components/views/AuthPageView';
 import { InputExpenseView } from './components/views/InputExpenseView';
 import { HistoryView } from './components/views/HistoryView';
 import { AnalyticsView } from './components/views/AnalyticsView';
@@ -40,10 +40,16 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
 
-  // Authentication states
+  // Authentication & Session Mode states
+  // 'guest': masuk langsung tanpa login, data tergabung dalam 1 database bersama
+  // 'account': masuk/daftar akun pribadi, data privat tersimpan di akun masing-masing
+  // null: belum memilih, tampilkan AuthPageView (halaman login/signup/guest tersendiri)
+  const [sessionMode, setSessionMode] = useState<'guest' | 'account' | null>(() => {
+    return (localStorage.getItem('catering_session_mode') as 'guest' | 'account') || null;
+  });
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const [showAuthPage, setShowAuthPage] = useState(false);
 
   // Live Firestore database states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -52,18 +58,43 @@ export default function App() {
   const [trashItems, setTrashItems] = useState<Transaction[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
 
-  // Real-time Auth & Firestore synchronization
+  // 1. Monitor Firebase Auth State
   useEffect(() => {
     const unsubAuth = subscribeAuth((user) => {
       setCurrentUser(user);
+      if (user) {
+        setSessionMode('account');
+        localStorage.setItem('catering_session_mode', 'account');
+      } else {
+        const savedMode = localStorage.getItem('catering_session_mode');
+        if (savedMode === 'account') {
+          // User was logged out
+          localStorage.removeItem('catering_session_mode');
+          setSessionMode(null);
+        }
+      }
+      setAuthInitialized(true);
     });
 
-    const unsubTrx = subscribeToTransactions((items) => {
+    return () => unsubAuth();
+  }, []);
+
+  // 2. Real-time Firestore synchronization based on user isolation mode
+  // Siapapun yang guest -> effectiveUserId = 'guest' (1 database bersama)
+  // Siapapun yang login -> effectiveUserId = currentUser.uid (akun masing-masing)
+  const effectiveUserId = (sessionMode === 'account' && currentUser?.uid) ? currentUser.uid : 'guest';
+
+  useEffect(() => {
+    if (!authInitialized) return;
+
+    setIsDbLoading(true);
+
+    const unsubTrx = subscribeToTransactions(effectiveUserId, (items) => {
       setTransactions(items);
       setIsDbLoading(false);
     });
 
-    const unsubTrash = subscribeToTrash((items) => {
+    const unsubTrash = subscribeToTrash(effectiveUserId, (items) => {
       setTrashItems(items);
     });
 
@@ -76,13 +107,24 @@ export default function App() {
     });
 
     return () => {
-      unsubAuth();
       unsubTrx?.();
       unsubTrash?.();
       unsubSup?.();
       unsubIng?.();
     };
-  }, []);
+  }, [effectiveUserId, authInitialized]);
+
+  // Handle Logout / Ganti Akun & Mode
+  const handleLogoutOrSwitchMode = async () => {
+    if (window.confirm('Keluar dari sesi dan kembali ke halaman pilihan akun / tamu?')) {
+      localStorage.removeItem('catering_session_mode');
+      if (currentUser) {
+        await logoutUser();
+      }
+      setSessionMode(null);
+      setShowAuthPage(false);
+    }
+  };
 
   // --- SEMUA PERHITUNGAN & STATISTIK 100% DIHITUNG DARI DATA FIRESTORE ---
 
@@ -184,11 +226,12 @@ export default function App() {
     ])
   );
 
-  // CRUD Actions -> Langsung simpan ke Cloud Firestore
+  // CRUD Actions -> Langsung simpan ke Cloud Firestore dengan penanda userId
   const handleAddTransaction = async (newTrxData: Omit<Transaction, 'id'>) => {
     const newTrx: Transaction = {
       ...newTrxData,
       id: `TRX-${Date.now()}`,
+      userId: effectiveUserId,
     };
     try {
       await addTransactionDoc(newTrx);
@@ -201,7 +244,10 @@ export default function App() {
     const target = transactions.find((t) => t.id === id);
     if (target) {
       try {
-        await moveTransactionToTrash(target);
+        await moveTransactionToTrash({
+          ...target,
+          userId: effectiveUserId,
+        });
       } catch (e) {
         console.error('Gagal memindahkan ke sampah di Firestore:', e);
       }
@@ -212,7 +258,10 @@ export default function App() {
     const target = trashItems.find((t) => t.id === id);
     if (target) {
       try {
-        await restoreTransactionFromTrash(target);
+        await restoreTransactionFromTrash({
+          ...target,
+          userId: effectiveUserId,
+        });
       } catch (e) {
         console.error('Gagal memulihkan transaksi di Firestore:', e);
       }
@@ -238,9 +287,10 @@ export default function App() {
   };
 
   const handleResetData = async () => {
-    if (window.confirm('Reset data transaksi kembali ke data awal katering di Firestore?')) {
+    const scopeLabel = sessionMode === 'account' ? 'database akun pribadi Anda' : 'database bersama Guest';
+    if (window.confirm(`Reset data transaksi ${scopeLabel} kembali ke data awal demo di Firestore?`)) {
       try {
-        await resetFirestoreToDemo();
+        await resetFirestoreToDemo(effectiveUserId);
       } catch (e) {
         console.error('Gagal reset data di Firestore:', e);
       }
@@ -287,6 +337,35 @@ export default function App() {
     link.remove();
   };
 
+  // Loading screen saat inisialisasi awal auth
+  if (!authInitialized) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-3" />
+        <p className="text-sm font-semibold text-slate-300">Memuat Sistem Catering Cost Intelligence...</p>
+      </div>
+    );
+  }
+
+  // JIKA BELUM MEMILIH ATAU MEMBUKA HALAMAN AUTH: TAMPILKAN PAGE TERSENDIRI
+  if (!sessionMode || showAuthPage) {
+    return (
+      <AuthPageView
+        onSelectGuest={() => {
+          setSessionMode('guest');
+          localStorage.setItem('catering_session_mode', 'guest');
+          setShowAuthPage(false);
+        }}
+        onAuthSuccess={() => {
+          setSessionMode('account');
+          localStorage.setItem('catering_session_mode', 'account');
+          setShowAuthPage(false);
+        }}
+        onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans antialiased text-slate-800">
       {/* Mobile Sidebar Backdrop */}
@@ -316,15 +395,9 @@ export default function App() {
           onImportData={() => alert('Fitur Import File JSON didukung')}
           onResetData={handleResetData}
           currentUser={currentUser}
-          onOpenAuthModal={(mode) => {
-            setAuthModalMode(mode || 'login');
-            setIsAuthModalOpen(true);
-          }}
-          onLogout={async () => {
-            if (window.confirm('Keluar dari akun?')) {
-              await logoutUser();
-            }
-          }}
+          isGuestMode={sessionMode === 'guest'}
+          onOpenAuthPage={() => setShowAuthPage(true)}
+          onLogout={handleLogoutOrSwitchMode}
         />
       </div>
 
@@ -351,15 +424,9 @@ export default function App() {
         <TopBar
           onOpenAddModal={() => setIsAddModalOpen(true)}
           currentUser={currentUser}
-          onOpenAuthModal={(mode) => {
-            setAuthModalMode(mode || 'login');
-            setIsAuthModalOpen(true);
-          }}
-          onLogout={async () => {
-            if (window.confirm('Keluar dari akun?')) {
-              await logoutUser();
-            }
-          }}
+          isGuestMode={sessionMode === 'guest'}
+          onOpenAuthPage={() => setShowAuthPage(true)}
+          onLogout={handleLogoutOrSwitchMode}
         />
 
         {/* View Switcher Container */}
@@ -368,7 +435,11 @@ export default function App() {
             <div className="p-12 text-center flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
               <p className="text-sm font-semibold text-slate-700">Menghubungkan ke Database Firestore...</p>
-              <p className="text-xs text-slate-400 mt-1">Mengambil dokumen real-time dari catering-expense-tracker</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {sessionMode === 'account'
+                  ? 'Sinkronisasi database privat akun Anda'
+                  : 'Sinkronisasi 1 database bersama untuk mode guest'}
+              </p>
             </div>
           ) : (
             <>
@@ -475,13 +546,6 @@ export default function App() {
       <ReceiptDetailModal
         transaction={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
-      />
-
-      {/* Login & Signup Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        defaultMode={authModalMode}
       />
     </div>
   );

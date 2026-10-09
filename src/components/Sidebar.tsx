@@ -39,7 +39,8 @@ interface SidebarProps {
   onImportData: () => void;
   onResetData: () => void;
   currentUser: any;
-  onOpenAuthModal: (mode?: 'login' | 'signup') => void;
+  isGuestMode?: boolean;
+  onOpenAuthPage: () => void;
   onLogout: () => void;
 }
 
@@ -53,7 +54,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onImportData,
   onResetData,
   currentUser,
-  onOpenAuthModal,
+  isGuestMode,
+  onOpenAuthPage,
   onLogout,
 }) => {
   const menuItems = [
@@ -122,10 +124,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="mt-3 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Dapur Utama: <strong className="text-slate-200">Katering Rasa</strong></span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isGuestMode ? 'bg-amber-400' : 'bg-emerald-500'
+              } animate-pulse`}
+            ></span>
+            <span>
+              Database:{' '}
+              <strong className="text-slate-200">
+                {isGuestMode ? 'Tamu (Bersama)' : 'Akun Pribadi'}
+              </strong>
+            </span>
           </div>
-          <span className="text-[10px] text-slate-500">v1.0</span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            {isGuestMode ? 'Guest' : 'Private'}
+          </span>
         </div>
       </div>
 
@@ -230,47 +243,75 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* User profile footer */}
-        <div className="mt-3 pt-2.5 flex items-center justify-between px-1">
+        {/* User profile & Mode switcher footer */}
+        <div className="mt-3 pt-2.5 px-1 border-t border-slate-800/80">
           {currentUser ? (
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 min-w-0">
-                {currentUser.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt={currentUser.displayName || 'User'}
-                    className="w-7 h-7 rounded-full object-cover ring-1 ring-white/20"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[11px] font-bold ring-1 ring-white/20">
-                    {(currentUser.displayName || currentUser.email || 'U').slice(0, 2).toUpperCase()}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2 min-w-0">
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={currentUser.displayName || 'User'}
+                      className="w-7 h-7 rounded-full object-cover ring-1 ring-white/20"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[11px] font-bold ring-1 ring-white/20">
+                      {(currentUser.displayName || currentUser.email || 'U').slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="overflow-hidden min-w-0">
+                    <p className="text-xs font-semibold text-slate-200 truncate">
+                      {currentUser.displayName || currentUser.email?.split('@')[0] || 'User Katering'}
+                    </p>
+                    <p className="text-[10px] text-emerald-400 truncate flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      Akun Pribadi
+                    </p>
                   </div>
-                )}
-                <div className="overflow-hidden min-w-0">
-                  <p className="text-xs font-semibold text-slate-200 truncate">
-                    {currentUser.displayName || currentUser.email?.split('@')[0] || 'User Katering'}
-                  </p>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    {currentUser.email || 'Terautentikasi'}
-                  </p>
                 </div>
+                <button
+                  onClick={onLogout}
+                  title="Keluar / Ganti Akun"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-900 transition-colors ml-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={onLogout}
-                title="Keluar dari akun"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-900 transition-colors ml-1"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
             </div>
           ) : (
-            <button
-              onClick={() => onOpenAuthModal('login')}
-              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Masuk / Daftar Akun</span>
-            </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs">
+                    <Users className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <span className="text-[11px] font-bold text-slate-200 block truncate leading-tight">
+                      Mode Tamu (Guest)
+                    </span>
+                    <span className="text-[9px] text-sky-400/90 font-medium block truncate leading-tight">
+                      1 Database Bersama
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={onOpenAuthPage}
+                  title="Ganti ke Akun Pribadi"
+                  className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold underline px-1"
+                >
+                  Ganti
+                </button>
+              </div>
+
+              <button
+                onClick={onOpenAuthPage}
+                className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Masuk / Daftar Akun</span>
+              </button>
+            </div>
           )}
         </div>
       </div>

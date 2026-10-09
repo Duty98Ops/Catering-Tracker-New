@@ -30,12 +30,14 @@ service cloud.firestore {
         && (!('qty' in data) || (data.qty is string && data.qty.size() <= 100))
         && (!('time' in data) || (data.time is string && data.time.size() <= 20))
         && (!('invoiceNumber' in data) || (data.invoiceNumber is string && data.invoiceNumber.size() <= 100))
-        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
     }
 
     function isValidSupplier(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 200
         && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 50
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
         && (!('category' in data) || (data.category is string && data.category.size() <= 200))
         && (!('address' in data) || (data.address is string && data.address.size() <= 300))
         && (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5))

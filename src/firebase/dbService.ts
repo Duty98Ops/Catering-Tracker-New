@@ -81,8 +81,9 @@ export async function updateIngredientDoc(ing: IngredientBenchmark) {
   }
 }
 
-// Subscribe to transactions with real-time updates and auto-seed if empty
+// Subscribe to transactions with real-time updates and user-isolation
 export function subscribeToTransactions(
+  targetUserId: string = 'guest',
   onData: (items: Transaction[]) => void,
   onError?: (err: Error) => void
 ) {
@@ -97,7 +98,7 @@ export function subscribeToTransactions(
             const batch = writeBatch(db);
             INITIAL_TRANSACTIONS.forEach((trx) => {
               const docRef = doc(db, TRANSACTIONS_PATH, trx.id);
-              batch.set(docRef, trx);
+              batch.set(docRef, { ...trx, userId: 'guest' });
             });
             await batch.commit();
           } catch (seedErr) {
@@ -107,10 +108,38 @@ export function subscribeToTransactions(
           return;
         }
 
-        const items: Transaction[] = [];
+        const allItems: Transaction[] = [];
         snapshot.forEach((d) => {
-          items.push(d.data() as Transaction);
+          allItems.push(d.data() as Transaction);
         });
+
+        // Filter based on user isolation mode
+        let items: Transaction[] = [];
+        if (targetUserId === 'guest') {
+          items = allItems.filter((t) => !t.userId || t.userId === 'guest');
+        } else {
+          items = allItems.filter((t) => t.userId === targetUserId);
+
+          // If new user has 0 private documents, create starter copy for their private database
+          if (items.length === 0) {
+            try {
+              const batch = writeBatch(db);
+              INITIAL_TRANSACTIONS.slice(0, 8).forEach((template) => {
+                const userDocId = `TRX-${targetUserId.slice(0, 5)}-${template.id}`;
+                const userDoc: Transaction = {
+                  ...template,
+                  id: userDocId,
+                  userId: targetUserId,
+                };
+                batch.set(doc(db, TRANSACTIONS_PATH, userDocId), userDoc);
+              });
+              await batch.commit();
+              return;
+            } catch (seedErr) {
+              console.warn('Starter seeding for new user:', seedErr);
+            }
+          }
+        }
 
         // Sort descending by date & time
         items.sort((a, b) => {
@@ -132,6 +161,7 @@ export function subscribeToTransactions(
 
 // Subscribe to trash/archive collection
 export function subscribeToTrash(
+  targetUserId: string = 'guest',
   onData: (items: Transaction[]) => void
 ) {
   try {
@@ -139,10 +169,16 @@ export function subscribeToTrash(
     return onSnapshot(
       colRef,
       (snapshot) => {
-        const items: Transaction[] = [];
+        const allItems: Transaction[] = [];
         snapshot.forEach((d) => {
-          items.push(d.data() as Transaction);
+          allItems.push(d.data() as Transaction);
         });
+
+        const items =
+          targetUserId === 'guest'
+            ? allItems.filter((t) => !t.userId || t.userId === 'guest')
+            : allItems.filter((t) => t.userId === targetUserId);
+
         onData(items);
       },
       (error) => {
@@ -219,22 +255,45 @@ export async function clearAllTrashDocs(trashItems: Transaction[]) {
   }
 }
 
-// Reset data to initial demo in Firestore
-export async function resetFirestoreToDemo() {
+// Reset data to initial demo in Firestore for the active user/guest scope
+export async function resetFirestoreToDemo(targetUserId: string = 'guest') {
   const batch = writeBatch(db);
 
-  // Get current transactions and clear
+  // Get current transactions and clear only matching targetUserId
   const trxSnap = await getDocs(collection(db, TRANSACTIONS_PATH));
-  trxSnap.forEach((d) => batch.delete(d.ref));
+  trxSnap.forEach((d) => {
+    const data = d.data();
+    if (targetUserId === 'guest') {
+      if (!data.userId || data.userId === 'guest') {
+        batch.delete(d.ref);
+      }
+    } else {
+      if (data.userId === targetUserId) {
+        batch.delete(d.ref);
+      }
+    }
+  });
 
-  // Get trash and clear
+  // Get trash and clear only matching targetUserId
   const trashSnap = await getDocs(collection(db, TRASH_PATH));
-  trashSnap.forEach((d) => batch.delete(d.ref));
+  trashSnap.forEach((d) => {
+    const data = d.data();
+    if (targetUserId === 'guest') {
+      if (!data.userId || data.userId === 'guest') {
+        batch.delete(d.ref);
+      }
+    } else {
+      if (data.userId === targetUserId) {
+        batch.delete(d.ref);
+      }
+    }
+  });
 
-  // Add initial transactions
+  // Add initial transactions for this scope
   INITIAL_TRANSACTIONS.forEach((trx) => {
-    const docRef = doc(db, TRANSACTIONS_PATH, trx.id);
-    batch.set(docRef, trx);
+    const docId = targetUserId === 'guest' ? trx.id : `TRX-${targetUserId.slice(0, 5)}-${trx.id}`;
+    const docRef = doc(db, TRANSACTIONS_PATH, docId);
+    batch.set(docRef, { ...trx, id: docId, userId: targetUserId });
   });
 
   try {
