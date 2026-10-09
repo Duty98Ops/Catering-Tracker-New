@@ -1,0 +1,6 @@
+{
+  "name": "Catering Cost Intelligence",
+  "description": "Dashboard Operasional Catering - Cost Intelligence untuk monitoring pengeluaran bahan pangan dan analisis efisiensi biaya katering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
