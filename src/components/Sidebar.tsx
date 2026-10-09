@@ -41,6 +41,7 @@ interface SidebarProps {
   currentUser: any;
   isGuestMode?: boolean;
   onOpenAuthPage: () => void;
+  onOpenStructureModal?: () => void;
   onLogout: () => void;
 }
 
@@ -56,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   isGuestMode,
   onOpenAuthPage,
+  onOpenStructureModal,
   onLogout,
 }) => {
   const menuItems = [
@@ -241,6 +243,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Reset Demo
             </button>
           </div>
+
+          {onOpenStructureModal && (
+            <button
+              onClick={onOpenStructureModal}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
+            >
+              <Database className="w-3 h-3 text-amber-400" />
+              <span>Lihat Struktur Database</span>
+            </button>
+          )}
         </div>
 
         {/* User profile & Mode switcher footer */}

@@ -50,6 +50,12 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // Users Collection (User Profiles & Guest Metadata)
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(userId);
+    }
+
     // Transactions Collection
     match /transactions/{transactionId} {
       allow get, list: if true;

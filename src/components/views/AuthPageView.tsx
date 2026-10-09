@@ -20,12 +20,16 @@ import { loginWithGoogle, loginWithEmail, registerWithEmail } from '../../fireba
 interface AuthPageViewProps {
   onSelectGuest: () => void;
   onAuthSuccess: () => void;
+  onSelectDemoAccount?: (account: { uid: string; displayName: string; email: string }) => void;
+  onOpenStructureModal?: () => void;
   onCancel?: () => void;
 }
 
 export const AuthPageView: React.FC<AuthPageViewProps> = ({
   onSelectGuest,
   onAuthSuccess,
+  onSelectDemoAccount,
+  onOpenStructureModal,
   onCancel,
 }) => {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
@@ -34,6 +38,23 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleQuickLogin = async (demoEmail: string, demoPass: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setTab('login');
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      await loginWithEmail(demoEmail, demoPass);
+      onAuthSuccess();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMessage(err.message || 'Gagal masuk akun demo.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleAuth = async () => {
     setLoading(true);
@@ -193,11 +214,76 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
             </button>
           </div>
 
+          {/* 2 Demo Accounts with Seeded Data in Firestore & Firebase Auth */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                2 Akun Terdaftar di Firebase Auth (Siap Uji Coba):
+              </span>
+              {onOpenStructureModal && (
+                <button
+                  type="button"
+                  onClick={onOpenStructureModal}
+                  className="text-[11px] text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer"
+                >
+                  Lihat Struktur Firestore
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('bagus@catering.com', 'password123')}
+                disabled={loading}
+                className="p-3 bg-indigo-50/80 hover:bg-indigo-100 border-2 border-indigo-200/80 hover:border-indigo-400 rounded-xl text-left transition-all cursor-pointer group shadow-2xs"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-indigo-950 group-hover:text-indigo-600">
+                    👨‍🍳 1-Klik Masuk: Chef Bagus
+                  </span>
+                  <span className="text-[10px] bg-indigo-200/90 text-indigo-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                    5 Nota
+                  </span>
+                </div>
+                <span className="text-[11px] text-indigo-700 block mt-0.5 font-medium">
+                  Bagus Catering Prima (Rp 10.350.000)
+                </span>
+                <div className="mt-1.5 pt-1.5 border-t border-indigo-200/60 flex items-center justify-between text-[10px] text-slate-600 font-mono">
+                  <span>bagus@catering.com</span>
+                  <span className="text-indigo-600 font-semibold">pass: password123</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('siti@catering.com', 'password123')}
+                disabled={loading}
+                className="p-3 bg-emerald-50/80 hover:bg-emerald-100 border-2 border-emerald-200/80 hover:border-emerald-400 rounded-xl text-left transition-all cursor-pointer group shadow-2xs"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-emerald-950 group-hover:text-emerald-600">
+                    👩‍🍳 1-Klik Masuk: Bu Siti
+                  </span>
+                  <span className="text-[10px] bg-emerald-200/90 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                    5 Nota
+                  </span>
+                </div>
+                <span className="text-[11px] text-emerald-700 block mt-0.5 font-medium">
+                  Siti Rasa Nusantara (Rp 2.905.000)
+                </span>
+                <div className="mt-1.5 pt-1.5 border-t border-emerald-200/60 flex items-center justify-between text-[10px] text-slate-600 font-mono">
+                  <span>siti@catering.com</span>
+                  <span className="text-emerald-600 font-semibold">pass: password123</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Divider */}
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 w-full"></div>
             <span className="bg-white px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
-              Atau Masuk dengan Akun Pribadi
+              Atau Masuk dengan Akun Baru Anda
             </span>
           </div>
 

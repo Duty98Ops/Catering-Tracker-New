@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "description": "ID unik transaksi" },
+        "userId": { "type": "string", "maxLength": 128, "description": "ID partisi pemilik: 'guest' untuk database bersama, atau UID akun pribadi" },
         "date": { "type": "string", "description": "Tanggal pembelian YYYY-MM-DD" },
         "time": { "type": "string", "description": "Waktu pembelian HH:mm" },
         "item": { "type": "string", "maxLength": 200, "description": "Nama bahan baku atau produk belanja" },

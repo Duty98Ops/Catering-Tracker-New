@@ -1,11 +1,12 @@
 import React from 'react';
-import { Plus, LogIn, LogOut, Users, ShieldCheck, Sparkles } from 'lucide-react';
+import { Plus, LogIn, LogOut, Users, ShieldCheck, Database } from 'lucide-react';
 
 interface TopBarProps {
   onOpenAddModal: () => void;
   currentUser?: any;
   isGuestMode?: boolean;
   onOpenAuthPage: () => void;
+  onOpenStructureModal?: () => void;
   onLogout?: () => void;
 }
 
@@ -14,6 +15,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   currentUser,
   isGuestMode = true,
   onOpenAuthPage,
+  onOpenStructureModal,
   onLogout,
 }) => {
   return (
@@ -50,6 +52,19 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right: Actions & Auth */}
         <div className="flex items-center flex-wrap gap-2.5">
+          {/* Structure DB Inspector Button */}
+          {onOpenStructureModal && (
+            <button
+              onClick={onOpenStructureModal}
+              title="Lihat Struktur & Dokumen di Cloud Firestore"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+            >
+              <Database className="w-3.5 h-3.5 text-amber-600" />
+              <span className="hidden sm:inline">Struktur DB Firestore</span>
+              <span className="sm:hidden">Struktur DB</span>
+            </button>
+          )}
+
           {currentUser ? (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
               {currentUser.photoURL ? (

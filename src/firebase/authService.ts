@@ -8,7 +8,8 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { auth } from './config';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from './config';
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
@@ -19,6 +20,23 @@ googleProvider.setCustomParameters({
 export async function loginWithGoogle(): Promise<User> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    // Sync to Firestore /users collection
+    try {
+      await setDoc(
+        doc(db, 'users', result.user.uid),
+        {
+          uid: result.user.uid,
+          displayName: result.user.displayName || 'Pengguna Google',
+          email: result.user.email || '',
+          cateringName: `${result.user.displayName || 'Katering'} (Google)`,
+          role: 'owner',
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn('Could not sync user to Firestore:', e);
+    }
     return result.user;
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
@@ -49,6 +67,20 @@ export async function registerWithEmail(
       await updateProfile(result.user, {
         displayName: name.trim(),
       });
+    }
+    // Save to Firestore /users collection
+    try {
+      await setDoc(doc(db, 'users', result.user.uid), {
+        uid: result.user.uid,
+        displayName: name.trim() || email.split('@')[0],
+        email: result.user.email,
+        cateringName: `${name.trim() || 'Katering'} (Akun Baru)`,
+        role: 'owner',
+        description: 'Akun katering terdaftar via aplikasi.',
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Could not save user profile to Firestore:', e);
     }
     return result.user;
   } catch (error: any) {

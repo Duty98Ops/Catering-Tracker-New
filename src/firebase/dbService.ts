@@ -81,6 +81,28 @@ export async function updateIngredientDoc(ing: IngredientBenchmark) {
   }
 }
 
+// Subscribe to all transactions regardless of user (for Firestore structure inspector)
+export function subscribeToAllTransactions(onData: (items: Transaction[]) => void) {
+  try {
+    const colRef = collection(db, TRANSACTIONS_PATH);
+    return onSnapshot(
+      colRef,
+      (snapshot) => {
+        const items: Transaction[] = [];
+        snapshot.forEach((d) => {
+          items.push(d.data() as Transaction);
+        });
+        onData(items);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, TRANSACTIONS_PATH);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, TRANSACTIONS_PATH);
+  }
+}
+
 // Subscribe to transactions with real-time updates and user-isolation
 export function subscribeToTransactions(
   targetUserId: string = 'guest',

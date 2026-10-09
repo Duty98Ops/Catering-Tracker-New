@@ -8,6 +8,7 @@ import { CategoryDonutChart } from './components/CategoryDonutChart';
 import { TransactionsTable } from './components/TransactionsTable';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { ReceiptDetailModal } from './components/ReceiptDetailModal';
+import { FirestoreStructureModal } from './components/FirestoreStructureModal';
 
 // Views for navigation tabs & Auth Page
 import { AuthPageView } from './components/views/AuthPageView';
@@ -21,6 +22,7 @@ import { TrashView } from './components/views/TrashView';
 import { Menu, X, Loader2 } from 'lucide-react';
 import {
   subscribeToTransactions,
+  subscribeToAllTransactions,
   subscribeToTrash,
   subscribeToSuppliers,
   subscribeToIngredients,
@@ -39,6 +41,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
+  const [isStructureModalOpen, setIsStructureModalOpen] = useState(false);
 
   // Authentication & Session Mode states
   // 'guest': masuk langsung tanpa login, data tergabung dalam 1 database bersama
@@ -47,12 +50,23 @@ export default function App() {
   const [sessionMode, setSessionMode] = useState<'guest' | 'account' | null>(() => {
     return (localStorage.getItem('catering_session_mode') as 'guest' | 'account') || null;
   });
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const savedDemo = localStorage.getItem('catering_demo_user');
+    if (savedDemo) {
+      try {
+        return JSON.parse(savedDemo);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [authInitialized, setAuthInitialized] = useState(false);
   const [showAuthPage, setShowAuthPage] = useState(false);
 
   // Live Firestore database states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allRawTransactions, setAllRawTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [ingredients, setIngredients] = useState<IngredientBenchmark[]>([]);
   const [trashItems, setTrashItems] = useState<Transaction[]>([]);
@@ -94,6 +108,10 @@ export default function App() {
       setIsDbLoading(false);
     });
 
+    const unsubAll = subscribeToAllTransactions((items) => {
+      setAllRawTransactions(items);
+    });
+
     const unsubTrash = subscribeToTrash(effectiveUserId, (items) => {
       setTrashItems(items);
     });
@@ -108,19 +126,31 @@ export default function App() {
 
     return () => {
       unsubTrx?.();
+      unsubAll?.();
       unsubTrash?.();
       unsubSup?.();
       unsubIng?.();
     };
   }, [effectiveUserId, authInitialized]);
 
+  // Handle Pilih Akun Demo (Chef Bagus / Bu Siti)
+  const handleSelectDemoAccount = (acc: { uid: string; displayName: string; email: string }) => {
+    setCurrentUser(acc);
+    setSessionMode('account');
+    localStorage.setItem('catering_session_mode', 'account');
+    localStorage.setItem('catering_demo_user', JSON.stringify(acc));
+    setShowAuthPage(false);
+  };
+
   // Handle Logout / Ganti Akun & Mode
   const handleLogoutOrSwitchMode = async () => {
     if (window.confirm('Keluar dari sesi dan kembali ke halaman pilihan akun / tamu?')) {
       localStorage.removeItem('catering_session_mode');
-      if (currentUser) {
+      localStorage.removeItem('catering_demo_user');
+      if (currentUser?.providerData) {
         await logoutUser();
       }
+      setCurrentUser(null);
       setSessionMode(null);
       setShowAuthPage(false);
     }
@@ -350,19 +380,31 @@ export default function App() {
   // JIKA BELUM MEMILIH ATAU MEMBUKA HALAMAN AUTH: TAMPILKAN PAGE TERSENDIRI
   if (!sessionMode || showAuthPage) {
     return (
-      <AuthPageView
-        onSelectGuest={() => {
-          setSessionMode('guest');
-          localStorage.setItem('catering_session_mode', 'guest');
-          setShowAuthPage(false);
-        }}
-        onAuthSuccess={() => {
-          setSessionMode('account');
-          localStorage.setItem('catering_session_mode', 'account');
-          setShowAuthPage(false);
-        }}
-        onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
-      />
+      <>
+        <AuthPageView
+          onSelectGuest={() => {
+            setSessionMode('guest');
+            localStorage.setItem('catering_session_mode', 'guest');
+            setShowAuthPage(false);
+          }}
+          onAuthSuccess={() => {
+            setSessionMode('account');
+            localStorage.setItem('catering_session_mode', 'account');
+            setShowAuthPage(false);
+          }}
+          onSelectDemoAccount={handleSelectDemoAccount}
+          onOpenStructureModal={() => setIsStructureModalOpen(true)}
+          onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
+        />
+
+        {/* Modal Inspektor Struktur Database Firestore */}
+        <FirestoreStructureModal
+          isOpen={isStructureModalOpen}
+          onClose={() => setIsStructureModalOpen(false)}
+          allTransactions={allRawTransactions.length ? allRawTransactions : transactions}
+          activeUserId={effectiveUserId}
+        />
+      </>
     );
   }
 
@@ -397,6 +439,7 @@ export default function App() {
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
           onOpenAuthPage={() => setShowAuthPage(true)}
+          onOpenStructureModal={() => setIsStructureModalOpen(true)}
           onLogout={handleLogoutOrSwitchMode}
         />
       </div>
@@ -426,6 +469,7 @@ export default function App() {
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
           onOpenAuthPage={() => setShowAuthPage(true)}
+          onOpenStructureModal={() => setIsStructureModalOpen(true)}
           onLogout={handleLogoutOrSwitchMode}
         />
 
@@ -546,6 +590,14 @@ export default function App() {
       <ReceiptDetailModal
         transaction={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
+      />
+
+      {/* Firestore Structure Inspector Modal */}
+      <FirestoreStructureModal
+        isOpen={isStructureModalOpen}
+        onClose={() => setIsStructureModalOpen(false)}
+        allTransactions={allRawTransactions.length ? allRawTransactions : transactions}
+        activeUserId={effectiveUserId}
       />
     </div>
   );
