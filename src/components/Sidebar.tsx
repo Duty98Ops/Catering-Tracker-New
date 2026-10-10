@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-colors"
             >
               <RefreshCw className="w-3 h-3 text-amber-400" />
-              Reset Demo
+              Reset Data
             </button>
           </div>
         </div>

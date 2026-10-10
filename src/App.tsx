@@ -131,14 +131,7 @@ export default function App() {
     };
   }, [effectiveUserId, authInitialized]);
 
-  // Handle Pilih Akun Demo (Chef Bagus / Bu Siti)
-  const handleSelectDemoAccount = (acc: { uid: string; displayName: string; email: string }) => {
-    setCurrentUser(acc);
-    setSessionMode('account');
-    localStorage.setItem('catering_session_mode', 'account');
-    localStorage.setItem('catering_demo_user', JSON.stringify(acc));
-    setShowAuthPage(false);
-  };
+
 
   // Handle Logout / Ganti Akun & Mode
   const handleLogoutOrSwitchMode = async () => {
@@ -389,7 +382,6 @@ export default function App() {
           localStorage.setItem('catering_session_mode', 'account');
           setShowAuthPage(false);
         }}
-        onSelectDemoAccount={handleSelectDemoAccount}
         onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
       />
     );
