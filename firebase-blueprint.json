@@ -36,7 +36,7 @@
         "totalSpent": { "type": "number", "description": "Akumulasi total belanja" },
         "transactionCount": { "type": "number", "description": "Total transaksi belanja" }
       },
-      "required": ["name", "phone"]
+      "required": []
     },
     "IngredientBenchmark": {
       "title": "IngredientBenchmark",

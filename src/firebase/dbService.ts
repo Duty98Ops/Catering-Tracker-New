@@ -66,6 +66,16 @@ export async function updateSupplierDoc(sup: Supplier) {
   }
 }
 
+// Delete supplier doc from Firestore
+export async function deleteSupplierDoc(id: string) {
+  const docRef = doc(db, SUPPLIERS_PATH, id);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${SUPPLIERS_PATH}/${id}`);
+  }
+}
+
 // Subscribe to ingredients benchmarks collection
 export function subscribeToIngredients(onData: (items: IngredientBenchmark[]) => void) {
   try {

@@ -35,7 +35,8 @@ import {
   clearAllTrashDocs,
   resetFirestoreToDemo,
   addSupplierDoc,
-  updateSupplierDoc
+  updateSupplierDoc,
+  deleteSupplierDoc
 } from './firebase/dbService';
 import { subscribeAuth, logoutUser } from './firebase/authService';
 
@@ -582,6 +583,9 @@ export default function App() {
                   }}
                   onUpdateSupplier={async (sup) => {
                     await updateSupplierDoc({ ...sup, userId: effectiveUserId });
+                  }}
+                  onDeleteSupplier={async (supId) => {
+                    await deleteSupplierDoc(supId);
                   }}
                 />
               )}

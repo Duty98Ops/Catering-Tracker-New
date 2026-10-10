@@ -35,8 +35,8 @@ service cloud.firestore {
     }
 
     function isValidSupplier(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 200
-        && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 50
+      return (!('name' in data) || (data.name is string && data.name.size() <= 200))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 50))
         && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
         && (!('category' in data) || (data.category is string && data.category.size() <= 200))
         && (!('address' in data) || (data.address is string && data.address.size() <= 300))

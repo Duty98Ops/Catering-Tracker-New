@@ -124,13 +124,8 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({
           </div>
 
           <div className="px-2 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0">
-            <div className="flex items-center justify-between">
+            <div>
               <p className="text-[11px] font-medium text-slate-500">Transaksi Terbesar</p>
-              {maxTransaction.amount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
-                  Spike
-                </span>
-              )}
             </div>
             <p className="text-sm font-bold text-amber-700 mt-0.5">
               {formatRupiah(maxTransaction.amount)}
