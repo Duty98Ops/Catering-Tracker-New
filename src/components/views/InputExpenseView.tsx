@@ -156,7 +156,7 @@ export const InputExpenseView: React.FC<InputExpenseViewProps> = ({
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>{successNotice}</span>
           </div>
-          <span className="text-[11px] text-emerald-600 font-mono">Tersinkron ke Database</span>
+          <span className="text-[11px] text-emerald-600 font-medium">Tersimpan Aman</span>
         </div>
       )}
 

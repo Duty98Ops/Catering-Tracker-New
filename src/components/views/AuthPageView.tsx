@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Database,
   Flame,
   Layers
 } from 'lucide-react';
@@ -21,7 +20,6 @@ interface AuthPageViewProps {
   onSelectGuest: () => void;
   onAuthSuccess: () => void;
   onSelectDemoAccount?: (account: { uid: string; displayName: string; email: string }) => void;
-  onOpenStructureModal?: () => void;
   onCancel?: () => void;
 }
 
@@ -29,7 +27,6 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
   onSelectGuest,
   onAuthSuccess,
   onSelectDemoAccount,
-  onOpenStructureModal,
   onCancel,
 }) => {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
@@ -101,7 +98,7 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
       } else if (err.code === 'auth/email-already-in-use') {
         setErrorMessage('Email sudah terdaftar. Silakan pilih tab Masuk.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setErrorMessage('Metode Email/Password belum diaktifkan di Firebase Console. Anda dapat menggunakan tombol Google Sign-In.');
+        setErrorMessage('Metode Email/Password belum aktif. Anda dapat menggunakan tombol Google Sign-In atau akun demo.');
       } else {
         setErrorMessage(err.message || 'Terjadi kesalahan saat otentikasi.');
       }
@@ -149,7 +146,7 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
               Pusat Kontrol Biaya &amp; Belanja Katering
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-2.5 leading-relaxed">
-              Pantau pengeluaran bahan pangan harian, efisiensi HPP porsi prasmanan, dan integrasi supplier katering berbasis Cloud Firestore.
+              Pantau pengeluaran bahan pangan harian, efisiensi HPP porsi prasmanan, dan integrasi supplier katering secara real-time.
             </p>
 
             {/* Feature Points */}
@@ -161,7 +158,7 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
                 <div>
                   <strong className="text-white font-bold block">Mode Tamu (Guest)</strong>
                   <span className="text-slate-400 text-[11px]">
-                    Siapapun yang masuk sebagai tamu akan terhubung ke <strong>1 database bersama</strong> untuk kolaborasi instan.
+                    Siapapun yang masuk sebagai tamu langsung berbagi ruang kerja bersama tanpa perlu registrasi.
                   </span>
                 </div>
               </div>
@@ -173,7 +170,7 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
                 <div>
                   <strong className="text-white font-bold block">Akun Pribadi</strong>
                   <span className="text-slate-400 text-[11px]">
-                    Pengguna yang mendaftar/login memiliki <strong>database katering masing-masing</strong> yang terisolasi aman.
+                    Pengguna terdaftar memiliki ruang kerja katering tersendiri yang aman dan terlindungi.
                   </span>
                 </div>
               </div>
@@ -181,8 +178,11 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Cloud Firestore Live</span>
-            <span className="font-mono text-slate-400">asia-southeast2</span>
+            <span>Sistem Operasional Aktif</span>
+            <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Online
+            </span>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
                   Masuk sebagai Tamu (Guest)
                 </h3>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Masuk seketika tanpa perlu login. Anda akan terhubung ke <strong>1 Database Bersama</strong> yang dapat diakses oleh semua pengguna guest.
+                  Masuk seketika tanpa perlu login. Anda akan terhubung ke ruang kerja bersama yang dapat diakses oleh semua pengguna guest.
                 </p>
               </div>
             </div>
@@ -209,26 +209,17 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
               className="mt-4 w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
             >
               <Users className="w-4 h-4 text-sky-400" />
-              <span>Lanjutkan sebagai Tamu (1 Database Bersama)</span>
+              <span>Lanjutkan sebagai Tamu (Ruang Kerja Bersama)</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
-          {/* 2 Demo Accounts with Seeded Data in Firestore & Firebase Auth */}
+          {/* 2 Demo Accounts with Seeded Data */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                2 Akun Terdaftar di Firebase Auth (Siap Uji Coba):
+                Pilihan Akun Demo (Siap Uji Coba):
               </span>
-              {onOpenStructureModal && (
-                <button
-                  type="button"
-                  onClick={onOpenStructureModal}
-                  className="text-[11px] text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer"
-                >
-                  Lihat Struktur Firestore
-                </button>
-              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
@@ -420,14 +411,14 @@ export const AuthPageView: React.FC<AuthPageViewProps> = ({
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Menghubungkan ke Database...</span>
+                    <span>Memproses...</span>
                   </>
                 ) : (
                   <>
                     <span>
                       {tab === 'login'
-                        ? 'Masuk ke Database Pribadi'
-                        : 'Daftar & Buat Database Pribadi'}
+                        ? 'Masuk ke Akun'
+                        : 'Daftar Akun Baru'}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>

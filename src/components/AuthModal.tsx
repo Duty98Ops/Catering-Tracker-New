@@ -79,7 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else if (err.code === 'auth/email-already-in-use') {
         setErrorMessage('Email sudah terdaftar. Silakan pilih tab Masuk.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setErrorMessage('Metode Email/Password belum diaktifkan di Firebase Console. Anda dapat menggunakan tombol Google Sign-In di bawah!');
+        setErrorMessage('Metode Email/Password belum aktif. Anda dapat menggunakan tombol Google Sign-In.');
       } else {
         setErrorMessage(err.message || 'Terjadi kesalahan saat otentikasi.');
       }

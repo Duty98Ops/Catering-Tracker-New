@@ -70,11 +70,11 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
               Mitra Supplier Bahan Baku
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-              {suppliers.length} Mitra di Firestore
+              {suppliers.length} Mitra Aktif
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Daftar pasar tradisional, agen daging, toko bumbu, dan distributor katering tersimpan di database
+            Daftar pasar tradisional, agen daging, toko bumbu, dan distributor bahan katering
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                   type="submit"
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
                 >
-                  Simpan ke Firestore
+                  Simpan Mitra
                 </button>
               </div>
             </form>

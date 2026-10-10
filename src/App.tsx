@@ -8,7 +8,6 @@ import { CategoryDonutChart } from './components/CategoryDonutChart';
 import { TransactionsTable } from './components/TransactionsTable';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { ReceiptDetailModal } from './components/ReceiptDetailModal';
-import { FirestoreStructureModal } from './components/FirestoreStructureModal';
 
 // Views for navigation tabs & Auth Page
 import { AuthPageView } from './components/views/AuthPageView';
@@ -41,7 +40,6 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
-  const [isStructureModalOpen, setIsStructureModalOpen] = useState(false);
 
   // Authentication & Session Mode states
   // 'guest': masuk langsung tanpa login, data tergabung dalam 1 database bersama
@@ -307,22 +305,22 @@ export default function App() {
   };
 
   const handleClearAllTrash = async () => {
-    if (window.confirm('Hapus seluruh item di tempat sampah secara permanen dari Firestore?')) {
+    if (window.confirm('Hapus seluruh item di tempat sampah secara permanen?')) {
       try {
         await clearAllTrashDocs(trashItems);
       } catch (e) {
-        console.error('Gagal mengosongkan sampah di Firestore:', e);
+        console.error('Gagal mengosongkan sampah:', e);
       }
     }
   };
 
   const handleResetData = async () => {
-    const scopeLabel = sessionMode === 'account' ? 'database akun pribadi Anda' : 'database bersama Guest';
-    if (window.confirm(`Reset data transaksi ${scopeLabel} kembali ke data awal demo di Firestore?`)) {
+    const scopeLabel = sessionMode === 'account' ? 'akun pribadi Anda' : 'mode tamu bersama';
+    if (window.confirm(`Reset data transaksi untuk ${scopeLabel} kembali ke data awal?`)) {
       try {
         await resetFirestoreToDemo(effectiveUserId);
       } catch (e) {
-        console.error('Gagal reset data di Firestore:', e);
+        console.error('Gagal reset data:', e);
       }
     }
   };
@@ -380,31 +378,20 @@ export default function App() {
   // JIKA BELUM MEMILIH ATAU MEMBUKA HALAMAN AUTH: TAMPILKAN PAGE TERSENDIRI
   if (!sessionMode || showAuthPage) {
     return (
-      <>
-        <AuthPageView
-          onSelectGuest={() => {
-            setSessionMode('guest');
-            localStorage.setItem('catering_session_mode', 'guest');
-            setShowAuthPage(false);
-          }}
-          onAuthSuccess={() => {
-            setSessionMode('account');
-            localStorage.setItem('catering_session_mode', 'account');
-            setShowAuthPage(false);
-          }}
-          onSelectDemoAccount={handleSelectDemoAccount}
-          onOpenStructureModal={() => setIsStructureModalOpen(true)}
-          onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
-        />
-
-        {/* Modal Inspektor Struktur Database Firestore */}
-        <FirestoreStructureModal
-          isOpen={isStructureModalOpen}
-          onClose={() => setIsStructureModalOpen(false)}
-          allTransactions={allRawTransactions.length ? allRawTransactions : transactions}
-          activeUserId={effectiveUserId}
-        />
-      </>
+      <AuthPageView
+        onSelectGuest={() => {
+          setSessionMode('guest');
+          localStorage.setItem('catering_session_mode', 'guest');
+          setShowAuthPage(false);
+        }}
+        onAuthSuccess={() => {
+          setSessionMode('account');
+          localStorage.setItem('catering_session_mode', 'account');
+          setShowAuthPage(false);
+        }}
+        onSelectDemoAccount={handleSelectDemoAccount}
+        onCancel={sessionMode ? () => setShowAuthPage(false) : undefined}
+      />
     );
   }
 
@@ -439,7 +426,6 @@ export default function App() {
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
           onOpenAuthPage={() => setShowAuthPage(true)}
-          onOpenStructureModal={() => setIsStructureModalOpen(true)}
           onLogout={handleLogoutOrSwitchMode}
         />
       </div>
@@ -469,7 +455,6 @@ export default function App() {
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
           onOpenAuthPage={() => setShowAuthPage(true)}
-          onOpenStructureModal={() => setIsStructureModalOpen(true)}
           onLogout={handleLogoutOrSwitchMode}
         />
 
@@ -478,11 +463,11 @@ export default function App() {
           {isDbLoading ? (
             <div className="p-12 text-center flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-              <p className="text-sm font-semibold text-slate-700">Menghubungkan ke Database Firestore...</p>
+              <p className="text-sm font-semibold text-slate-700">Menghubungkan ke Sistem Layanan...</p>
               <p className="text-xs text-slate-400 mt-1">
                 {sessionMode === 'account'
-                  ? 'Sinkronisasi database privat akun Anda'
-                  : 'Sinkronisasi 1 database bersama untuk mode guest'}
+                  ? 'Sinkronisasi ruang kerja akun pribadi Anda'
+                  : 'Sinkronisasi ruang kerja bersama untuk mode guest'}
               </p>
             </div>
           ) : (
@@ -590,14 +575,6 @@ export default function App() {
       <ReceiptDetailModal
         transaction={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
-      />
-
-      {/* Firestore Structure Inspector Modal */}
-      <FirestoreStructureModal
-        isOpen={isStructureModalOpen}
-        onClose={() => setIsStructureModalOpen(false)}
-        allTransactions={allRawTransactions.length ? allRawTransactions : transactions}
-        activeUserId={effectiveUserId}
       />
     </div>
   );

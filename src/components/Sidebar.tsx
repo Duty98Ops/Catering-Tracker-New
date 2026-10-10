@@ -7,7 +7,6 @@ import {
   Search,
   Users,
   Trash2,
-  Database,
   ChefHat,
   Download,
   Upload,
@@ -132,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               } animate-pulse`}
             ></span>
             <span>
-              Database:{' '}
+              Mode:{' '}
               <strong className="text-slate-200">
                 {isGuestMode ? 'Tamu (Bersama)' : 'Akun Pribadi'}
               </strong>
@@ -197,19 +196,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Bottom Card: Firebase Cloud Data Management */}
+      {/* Bottom Card: Storage & Data Sync Management */}
       <div className="p-3 border-t border-slate-800/80 bg-slate-950/80">
         <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 shadow-inner">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <Database className="w-4 h-4" />
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-xs font-semibold text-slate-200 leading-tight">
-                  Firebase Cloud Storage
+                  Sinkronisasi Data
                 </h4>
-                <p className="text-[10px] text-amber-400/90 font-mono mt-0.5">Firestore Database • Live</p>
+                <p className="text-[10px] text-emerald-400/90 font-mono mt-0.5">Sistem Aktif • Realtime</p>
               </div>
             </div>
           </div>
@@ -217,10 +216,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="mt-2.5 pt-2 border-t border-slate-800/70 flex items-center justify-between text-[11px] text-slate-400">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Cloud Sinkron
+              Tersimpan Aman
             </span>
             <span className="font-mono text-[10px] text-slate-400">
-              {transactionCount} Dokumen
+              {transactionCount} Data
             </span>
           </div>
 
@@ -236,23 +235,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               onClick={onResetData}
-              title="Reset ke data awal demo"
+              title="Reset ke data awal"
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-colors"
             >
               <RefreshCw className="w-3 h-3 text-amber-400" />
               Reset Demo
             </button>
           </div>
-
-          {onOpenStructureModal && (
-            <button
-              onClick={onOpenStructureModal}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
-            >
-              <Database className="w-3 h-3 text-amber-400" />
-              <span>Lihat Struktur Database</span>
-            </button>
-          )}
         </div>
 
         {/* User profile & Mode switcher footer */}
@@ -303,7 +292,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       Mode Tamu (Guest)
                     </span>
                     <span className="text-[9px] text-sky-400/90 font-medium block truncate leading-tight">
-                      1 Database Bersama
+                      Ruang Kerja Bersama
                     </span>
                   </div>
                 </div>

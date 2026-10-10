@@ -107,7 +107,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
             ></span>
             {todayTotal > 0 ? `${todayCount} nota hari ini` : 'Belum ada nota'}
           </div>
-          <span className="text-[11px] text-slate-400">Database Live</span>
+          <span className="text-[11px] text-slate-400">Sinkron Otomatis</span>
         </div>
       </div>
 
