@@ -130,7 +130,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[11px] font-medium border border-emerald-200">
             <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{last7DaysCount > 0 ? `${last7DaysCount} nota pekan ini` : '-8.4% vs pekan lalu'}</span>
+            <span>{last7DaysCount > 0 ? `${last7DaysCount} nota pekan ini` : '0 nota pekan ini'}</span>
           </div>
           <MiniSparkline data={sparkline7d} color="#10b981" fillColor="#10b981" />
         </div>
@@ -160,7 +160,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
             <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">
-              Efisiensi {efficiencyPercentage}%
+              {last30DaysTotal > 0 ? `Efisiensi ${efficiencyPercentage}%` : 'Belum ada nota'}
             </span>
             <span className="text-slate-400">•</span>
             <span className="text-slate-500">

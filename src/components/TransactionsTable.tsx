@@ -36,7 +36,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
   onSelectTransaction,
   onEditTransaction,
   onDeleteTransaction,
-  totalCount = 31,
+  totalCount = 0,
 }) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
@@ -141,8 +141,20 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
           <tbody className="divide-y divide-slate-100 text-xs">
             {displayedData.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">
-                  Tidak ada transaksi yang sesuai filter kategori ini.
+                <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <div className="flex flex-col items-center justify-center py-2">
+                    <Receipt className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="font-semibold text-slate-700 text-sm">
+                      {transactions.length === 0
+                        ? 'Belum ada transaksi pengeluaran tercatat'
+                        : 'Tidak ada transaksi yang sesuai filter kategori ini'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {transactions.length === 0
+                        ? 'Akun Anda baru dan bersih. Mulai catat belanja bahan baku dapur katering.'
+                        : 'Coba pilih kategori lain atau reset filter'}
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (

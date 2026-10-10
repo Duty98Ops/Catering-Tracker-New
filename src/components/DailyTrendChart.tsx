@@ -38,9 +38,9 @@ interface DailyTrendChartProps {
 
 export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({
   data,
-  totalPeriod = 1627000,
-  averageDaily = 892750,
-  maxTransaction = { amount: 1119000, date: '22 Sep' },
+  totalPeriod = 0,
+  averageDaily = 0,
+  maxTransaction = { amount: 0, date: '-' },
 }) => {
   const [selectedBar, setSelectedBar] = useState<any | null>(null);
 
@@ -126,15 +126,17 @@ export const DailyTrendChart: React.FC<DailyTrendChartProps> = ({
           <div className="px-2 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-medium text-slate-500">Transaksi Terbesar</p>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
-                Spike
-              </span>
+              {maxTransaction.amount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
+                  Spike
+                </span>
+              )}
             </div>
             <p className="text-sm font-bold text-amber-700 mt-0.5">
               {formatRupiah(maxTransaction.amount)}
             </p>
             <span className="text-[10px] text-slate-500 font-medium">
-              pada {maxTransaction.date} (Buffet Event)
+              {maxTransaction.amount > 0 ? `pada ${maxTransaction.date}` : 'Belum ada transaksi'}
             </span>
           </div>
         </div>

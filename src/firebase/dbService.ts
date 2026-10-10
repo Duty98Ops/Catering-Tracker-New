@@ -17,17 +17,24 @@ const TRASH_PATH = 'trash';
 const SUPPLIERS_PATH = 'suppliers';
 const INGREDIENTS_PATH = 'ingredients';
 
-// Subscribe to suppliers collection
-export function subscribeToSuppliers(onData: (items: Supplier[]) => void) {
+// Subscribe to suppliers collection with user isolation
+export function subscribeToSuppliers(
+  targetUserId: string = 'guest',
+  onData: (items: Supplier[]) => void
+) {
   try {
     const colRef = collection(db, SUPPLIERS_PATH);
     return onSnapshot(
       colRef,
       (snapshot) => {
-        const items: Supplier[] = [];
+        const allItems: Supplier[] = [];
         snapshot.forEach((d) => {
-          items.push(d.data() as Supplier);
+          allItems.push(d.data() as Supplier);
         });
+        const items =
+          targetUserId === 'guest'
+            ? allItems.filter((s) => !s.userId || s.userId === 'guest')
+            : allItems.filter((s) => s.userId === targetUserId);
         onData(items);
       },
       (error) => {
@@ -125,17 +132,22 @@ export function subscribeToTransactions(
       colRef,
       async (snapshot) => {
         if (snapshot.empty) {
-          // Auto-seed initial demo transactions to Firestore
-          try {
-            const batch = writeBatch(db);
-            INITIAL_TRANSACTIONS.forEach((trx) => {
-              const docRef = doc(db, TRANSACTIONS_PATH, trx.id);
-              batch.set(docRef, { ...trx, userId: 'guest' });
-            });
-            await batch.commit();
-          } catch (seedErr) {
-            console.warn('Seeding failed, using local initial data:', seedErr);
-            onData(INITIAL_TRANSACTIONS);
+          if (targetUserId === 'guest') {
+            // Auto-seed initial demo transactions to Firestore only for guest mode
+            try {
+              const batch = writeBatch(db);
+              INITIAL_TRANSACTIONS.forEach((trx) => {
+                const docRef = doc(db, TRANSACTIONS_PATH, trx.id);
+                batch.set(docRef, { ...trx, userId: 'guest' });
+              });
+              await batch.commit();
+            } catch (seedErr) {
+              console.warn('Seeding failed, using local initial data:', seedErr);
+              onData(INITIAL_TRANSACTIONS);
+            }
+          } else {
+            // New user account starts completely empty
+            onData([]);
           }
           return;
         }
@@ -150,27 +162,9 @@ export function subscribeToTransactions(
         if (targetUserId === 'guest') {
           items = allItems.filter((t) => !t.userId || t.userId === 'guest');
         } else {
+          // Personal account: strictly isolated to user's own transactions
+          // Brand new user account starts completely empty (0 transactions)
           items = allItems.filter((t) => t.userId === targetUserId);
-
-          // If new user has 0 private documents, create starter copy for their private database
-          if (items.length === 0) {
-            try {
-              const batch = writeBatch(db);
-              INITIAL_TRANSACTIONS.slice(0, 8).forEach((template) => {
-                const userDocId = `TRX-${targetUserId.slice(0, 5)}-${template.id}`;
-                const userDoc: Transaction = {
-                  ...template,
-                  id: userDocId,
-                  userId: targetUserId,
-                };
-                batch.set(doc(db, TRANSACTIONS_PATH, userDocId), userDoc);
-              });
-              await batch.commit();
-              return;
-            } catch (seedErr) {
-              console.warn('Starter seeding for new user:', seedErr);
-            }
-          }
         }
 
         // Sort descending by date & time
@@ -331,12 +325,14 @@ export async function resetFirestoreToDemo(targetUserId: string = 'guest') {
     }
   });
 
-  // Add initial transactions for this scope
-  INITIAL_TRANSACTIONS.forEach((trx) => {
-    const docId = targetUserId === 'guest' ? trx.id : `TRX-${targetUserId.slice(0, 5)}-${trx.id}`;
-    const docRef = doc(db, TRANSACTIONS_PATH, docId);
-    batch.set(docRef, { ...trx, id: docId, userId: targetUserId });
-  });
+  // Add initial transactions ONLY for guest mode. Personal accounts reset to empty (0 transactions).
+  if (targetUserId === 'guest') {
+    INITIAL_TRANSACTIONS.forEach((trx) => {
+      const docId = trx.id;
+      const docRef = doc(db, TRANSACTIONS_PATH, docId);
+      batch.set(docRef, { ...trx, id: docId, userId: 'guest' });
+    });
+  }
 
   try {
     await batch.commit();

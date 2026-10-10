@@ -119,7 +119,7 @@ export default function App() {
       setTrashItems(items);
     });
 
-    const unsubSup = subscribeToSuppliers((items) => {
+    const unsubSup = subscribeToSuppliers(effectiveUserId, (items) => {
       setSuppliers(items);
     });
 

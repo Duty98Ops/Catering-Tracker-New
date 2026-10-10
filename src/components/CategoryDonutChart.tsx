@@ -60,6 +60,8 @@ export const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({
   };
 
   const activeCategory = activeIndex !== null ? categories[activeIndex] : null;
+  const totalCategoryVal = categories.reduce((sum, c) => sum + c.value, 0);
+  const activeCategoriesCount = categories.filter((c) => c.value > 0).length;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between h-full">
@@ -151,7 +153,7 @@ export const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({
             ) : (
               <div>
                 <span className="text-lg font-black text-slate-900 leading-none block">
-                  8
+                  {activeCategoriesCount}
                 </span>
                 <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mt-0.5 block">
                   KATEGORI
@@ -164,43 +166,51 @@ export const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({
 
       {/* Legend & Nominal Breakdown (Grid 2 Kolom) */}
       <div className="space-y-1.5 pt-2 border-t border-slate-100 max-h-[175px] overflow-y-auto pr-1">
-        {categories.map((item, idx) => {
-          const isHovered = activeIndex === idx;
-          return (
-            <div
-              key={item.name}
-              onMouseEnter={() => setActiveIndex(idx)}
-              onMouseLeave={() => setActiveIndex(null)}
-              className={`flex items-center justify-between py-1 px-2 rounded-lg text-xs cursor-pointer transition-all ${
-                isHovered
-                  ? 'bg-slate-100 ring-1 ring-slate-300 font-semibold'
-                  : 'hover:bg-slate-50 text-slate-600'
-              }`}
-            >
-              <div className="flex items-center space-x-2 min-w-0">
-                <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="truncate text-slate-700 text-[11px] font-medium">
-                  {item.name}
-                </span>
-              </div>
+        {categories.length === 0 ? (
+          <div className="py-6 text-center text-xs text-slate-400">
+            Belum ada transaksi pengeluaran tercatat
+          </div>
+        ) : (
+          categories.map((item, idx) => {
+            const isHovered = activeIndex === idx;
+            return (
+              <div
+                key={item.name}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className={`flex items-center justify-between py-1 px-2 rounded-lg text-xs cursor-pointer transition-all ${
+                  isHovered
+                    ? 'bg-slate-100 ring-1 ring-slate-300 font-semibold'
+                    : 'hover:bg-slate-50 text-slate-600'
+                }`}
+              >
+                <div className="flex items-center space-x-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="truncate text-slate-700 text-[11px] font-medium">
+                    {item.name}
+                  </span>
+                </div>
 
-              <div className="flex items-center space-x-2 text-[11px] flex-shrink-0 ml-2">
-                <span className="font-bold text-slate-900">{item.percentage}%</span>
-                <span className="text-slate-400 font-mono text-[10px]">
-                  ({formatRupiah(item.value)})
-                </span>
+                <div className="flex items-center space-x-2 text-[11px] flex-shrink-0 ml-2">
+                  <span className="font-bold text-slate-900">{item.percentage}%</span>
+                  <span className="text-slate-400 font-mono text-[10px]">
+                    ({formatRupiah(item.value)})
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
         <span>Total Terakumulasi:</span>
-        <strong className="text-slate-700 font-semibold">Rp 1.627.000 (100%)</strong>
+        <strong className="text-slate-700 font-semibold">
+          {formatRupiah(totalCategoryVal)} ({totalCategoryVal > 0 ? '100%' : '0%'})
+        </strong>
       </div>
     </div>
   );
