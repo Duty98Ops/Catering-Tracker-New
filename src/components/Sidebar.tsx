@@ -39,8 +39,7 @@ interface SidebarProps {
   onResetData: () => void;
   currentUser: any;
   isGuestMode?: boolean;
-  onOpenAuthPage: () => void;
-  onOpenStructureModal?: () => void;
+  onOpenAuthPage: (mode?: 'login' | 'signup') => void;
   onLogout: () => void;
 }
 
@@ -56,7 +55,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   isGuestMode,
   onOpenAuthPage,
-  onOpenStructureModal,
   onLogout,
 }) => {
   const menuItems = [
@@ -297,21 +295,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={onOpenAuthPage}
+                  type="button"
+                  onClick={() => onOpenAuthPage('login')}
                   title="Ganti ke Akun Pribadi"
-                  className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold underline px-1"
+                  className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold underline px-1 cursor-pointer"
                 >
                   Ganti
                 </button>
               </div>
 
-              <button
-                onClick={onOpenAuthPage}
-                className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Masuk / Daftar Akun</span>
-              </button>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthPage('login')}
+                  className="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Masuk</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthPage('signup')}
+                  className="py-2 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <span>Daftar</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

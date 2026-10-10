@@ -59,7 +59,8 @@ export async function loginWithEmail(email: string, pass: string): Promise<User>
 export async function registerWithEmail(
   email: string,
   pass: string,
-  name: string
+  name: string,
+  businessName?: string
 ): Promise<User> {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, pass);
@@ -74,7 +75,7 @@ export async function registerWithEmail(
         uid: result.user.uid,
         displayName: name.trim() || email.split('@')[0],
         email: result.user.email,
-        cateringName: `${name.trim() || 'Katering'} (Akun Baru)`,
+        cateringName: businessName?.trim() || `${name.trim() || 'Katering'} (Akun Baru)`,
         role: 'owner',
         description: 'Akun katering terdaftar via aplikasi.',
         createdAt: new Date().toISOString()

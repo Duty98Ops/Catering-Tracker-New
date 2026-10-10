@@ -61,6 +61,7 @@ export default function App() {
   });
   const [authInitialized, setAuthInitialized] = useState(false);
   const [showAuthPage, setShowAuthPage] = useState(false);
+  const [authInitialView, setAuthInitialView] = useState<'login' | 'signup'>('login');
 
   // Live Firestore database states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -372,6 +373,7 @@ export default function App() {
   if (!sessionMode || showAuthPage) {
     return (
       <AuthPageView
+        initialView={authInitialView}
         onSelectGuest={() => {
           setSessionMode('guest');
           localStorage.setItem('catering_session_mode', 'guest');
@@ -417,7 +419,10 @@ export default function App() {
           onResetData={handleResetData}
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
-          onOpenAuthPage={() => setShowAuthPage(true)}
+          onOpenAuthPage={(mode = 'login') => {
+            setAuthInitialView(mode);
+            setShowAuthPage(true);
+          }}
           onLogout={handleLogoutOrSwitchMode}
         />
       </div>
@@ -446,7 +451,10 @@ export default function App() {
           onOpenAddModal={() => setIsAddModalOpen(true)}
           currentUser={currentUser}
           isGuestMode={sessionMode === 'guest'}
-          onOpenAuthPage={() => setShowAuthPage(true)}
+          onOpenAuthPage={(mode = 'login') => {
+            setAuthInitialView(mode);
+            setShowAuthPage(true);
+          }}
           onLogout={handleLogoutOrSwitchMode}
         />
 

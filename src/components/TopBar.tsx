@@ -5,8 +5,7 @@ interface TopBarProps {
   onOpenAddModal: () => void;
   currentUser?: any;
   isGuestMode?: boolean;
-  onOpenAuthPage: () => void;
-  onOpenStructureModal?: () => void;
+  onOpenAuthPage: (mode?: 'login' | 'signup') => void;
   onLogout?: () => void;
 }
 
@@ -79,13 +78,23 @@ export const TopBar: React.FC<TopBarProps> = ({
               )}
             </div>
           ) : (
-            <button
-              onClick={onOpenAuthPage}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5 text-blue-600" />
-              <span>Masuk / Buat Akun</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onOpenAuthPage('login')}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5 text-blue-600" />
+                <span>Masuk</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAuthPage('signup')}
+                className="hidden sm:inline-flex items-center px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                <span>Daftar Akun</span>
+              </button>
+            </div>
           )}
 
           {/* Primary Action Button: + Tambah Belanja (Blue) */}
