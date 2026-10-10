@@ -10,7 +10,11 @@ import {
   Coins,
   Receipt,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Pencil,
+  Save,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { Supplier } from '../../types';
 import { formatRupiah } from '../../utils/formatters';
@@ -18,46 +22,106 @@ import { formatRupiah } from '../../utils/formatters';
 interface SuppliersViewProps {
   suppliers: Supplier[];
   onAddSupplier?: (sup: Supplier) => Promise<void>;
+  onUpdateSupplier?: (sup: Supplier) => Promise<void>;
 }
 
 export const SuppliersView: React.FC<SuppliersViewProps> = ({
   suppliers,
   onAddSupplier,
+  onUpdateSupplier,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Form fields
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [rating, setRating] = useState('4.8');
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !phone.trim()) {
-      alert('Nama supplier dan nomor telepon wajib diisi.');
-      return;
-    }
-
-    const newSup: Supplier = {
-      id: `SUP-${Date.now()}`,
-      name: name.trim(),
-      category: category.trim() || 'Bahan Pangan Katering',
-      phone: phone.trim(),
-      address: address.trim() || 'Pasar Tradisional / Los Mitra',
-      rating: parseFloat(rating) || 4.8,
-      totalSpent: 0,
-      transactionCount: 0,
-    };
-
-    if (onAddSupplier) {
-      await onAddSupplier(newSup);
-    }
-
+  const handleOpenAdd = () => {
+    setEditingSupplier(null);
     setName('');
     setCategory('');
     setPhone('');
     setAddress('');
+    setRating('4.8');
+    setErrorMsg(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (sup: Supplier) => {
+    setEditingSupplier(sup);
+    setName(sup.name || '');
+    setCategory(sup.category || '');
+    setPhone(sup.phone || '');
+    setAddress(sup.address || '');
+    setRating(sup.rating ? sup.rating.toString() : '4.8');
+    setErrorMsg(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
     setIsModalOpen(false);
+    setEditingSupplier(null);
+    setErrorMsg(null);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (!name.trim() || !phone.trim()) {
+      setErrorMsg('Nama supplier dan nomor telepon wajib diisi.');
+      return;
+    }
+
+    const parsedRating = Math.min(5, Math.max(1, parseFloat(rating) || 4.8));
+
+    setIsSubmitting(true);
+    try {
+      if (editingSupplier) {
+        // Edit mode
+        const updatedSup: Supplier = {
+          ...editingSupplier,
+          name: name.trim(),
+          category: category.trim() || 'Bahan Pangan Katering',
+          phone: phone.trim(),
+          address: address.trim() || 'Pasar Tradisional / Los Mitra',
+          rating: parsedRating,
+        };
+
+        if (onUpdateSupplier) {
+          await onUpdateSupplier(updatedSup);
+        }
+      } else {
+        // Add mode
+        const newSup: Supplier = {
+          id: `SUP-${Date.now()}`,
+          name: name.trim(),
+          category: category.trim() || 'Bahan Pangan Katering',
+          phone: phone.trim(),
+          address: address.trim() || 'Pasar Tradisional / Los Mitra',
+          rating: parsedRating,
+          totalSpent: 0,
+          transactionCount: 0,
+        };
+
+        if (onAddSupplier) {
+          await onAddSupplier(newSup);
+        }
+      }
+
+      handleCloseModal();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg('Terjadi kesalahan saat menyimpan data mitra supplier.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -79,8 +143,8 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors self-start md:self-auto cursor-pointer"
+          onClick={handleOpenAdd}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors self-start md:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>+ Tambah Mitra Baru</span>
@@ -92,7 +156,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
         {suppliers.map((supplier) => (
           <div
             key={supplier.id}
-            className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+            className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
           >
             <div>
               <div className="flex items-start justify-between">
@@ -110,9 +174,18 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 text-amber-700 text-xs font-bold">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{supplier.rating}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 text-amber-700 text-xs font-bold">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{supplier.rating}</span>
+                  </div>
+                  <button
+                    onClick={() => handleOpenEdit(supplier)}
+                    title="Edit Data Mitra"
+                    className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 
@@ -152,86 +225,152 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Vendor Terverifikasi
               </span>
-              <a
-                href={`https://wa.me/${supplier.phone.replace(/[^0-9]/g, '')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"
-              >
-                <span>Hubungi WA</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenEdit(supplier)}
+                  className="text-xs text-slate-600 hover:text-blue-600 font-semibold inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                  title="Edit Mitra Supplier"
+                >
+                  <Pencil className="w-3 h-3 text-slate-400" />
+                  <span>Edit</span>
+                </button>
+                <a
+                  href={`https://wa.me/${supplier.phone.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Hubungi WA</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal Tambah Supplier */}
+      {/* Modal Tambah / Edit Supplier */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="text-base font-bold text-slate-900">Tambah Mitra Supplier Baru</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingSupplier ? 'Edit Mitra Supplier' : 'Tambah Mitra Supplier Baru'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {editingSupplier
+                    ? 'Perbarui informasi kontak dan data vendor katering'
+                    : 'Daftarkan vendor pasar atau distributor baru'}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSave} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nama Toko / Supplier *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nama Toko / Supplier <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Contoh: Toko Sayur Segar Jaya"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium"
                 />
               </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Kategori Produk</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Sayur, Daging, Bumbu"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Kategori Produk</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Sayur, Daging, Bumbu"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Rating Kualitas (1-5)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    placeholder="4.8"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-semibold"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nomor Telepon / WhatsApp *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nomor Telepon / WhatsApp <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="+62 812-..."
+                  placeholder="+62 812-3456-7890"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
                 />
               </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Alamat Pasar / Kios</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Pasar Induk Los B-2"
+                <textarea
+                  rows={2}
+                  placeholder="Contoh: Pasar Induk Kramat Jati, Blok B No. 12"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl font-semibold text-slate-600"
+                  disabled={isSubmitting}
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 border border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  Simpan Mitra
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{editingSupplier ? 'Simpan Perubahan' : 'Simpan Mitra'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

@@ -49,6 +49,16 @@ export async function addSupplierDoc(sup: Supplier) {
   }
 }
 
+// Update supplier doc in Firestore
+export async function updateSupplierDoc(sup: Supplier) {
+  const docRef = doc(db, SUPPLIERS_PATH, sup.id);
+  try {
+    await setDoc(docRef, sup, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${SUPPLIERS_PATH}/${sup.id}`);
+  }
+}
+
 // Subscribe to ingredients benchmarks collection
 export function subscribeToIngredients(onData: (items: IngredientBenchmark[]) => void) {
   try {
@@ -219,6 +229,16 @@ export async function addTransactionDoc(trx: Transaction) {
     await setDoc(docRef, trx);
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `${TRANSACTIONS_PATH}/${trx.id}`);
+  }
+}
+
+// Update transaction in Firestore
+export async function updateTransactionDoc(trx: Transaction) {
+  const docRef = doc(db, TRANSACTIONS_PATH, trx.id);
+  try {
+    await setDoc(docRef, trx, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${TRANSACTIONS_PATH}/${trx.id}`);
   }
 }
 

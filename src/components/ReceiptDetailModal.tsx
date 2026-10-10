@@ -10,7 +10,8 @@ import {
   Receipt,
   FileText,
   Clock,
-  MapPin
+  MapPin,
+  Pencil
 } from 'lucide-react';
 import { Transaction } from '../types';
 import {
@@ -22,11 +23,13 @@ import {
 interface ReceiptDetailModalProps {
   transaction: Transaction | null;
   onClose: () => void;
+  onEdit?: (trx: Transaction) => void;
 }
 
 export const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
   transaction,
   onClose,
+  onEdit,
 }) => {
   if (!transaction) return null;
 
@@ -136,17 +139,31 @@ export const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
           )}
 
           {/* Footer Actions */}
-          <div className="pt-2 flex items-center justify-between">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Cetak / PDF
-            </button>
+          <div className="pt-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Cetak / PDF
+              </button>
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    onEdit(transaction);
+                    onClose();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Transaksi</span>
+                </button>
+              )}
+            </div>
             <button
               onClick={onClose}
-              className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors"
+              className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
             >
               Tutup
             </button>

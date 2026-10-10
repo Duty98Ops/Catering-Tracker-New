@@ -8,6 +8,7 @@ import { CategoryDonutChart } from './components/CategoryDonutChart';
 import { TransactionsTable } from './components/TransactionsTable';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { ReceiptDetailModal } from './components/ReceiptDetailModal';
+import { EditTransactionModal } from './components/EditTransactionModal';
 
 // Views for navigation tabs & Auth Page
 import { AuthPageView } from './components/views/AuthPageView';
@@ -26,12 +27,14 @@ import {
   subscribeToSuppliers,
   subscribeToIngredients,
   addTransactionDoc,
+  updateTransactionDoc,
   moveTransactionToTrash,
   restoreTransactionFromTrash,
   deletePermanentlyFromTrash,
   clearAllTrashDocs,
   resetFirestoreToDemo,
-  addSupplierDoc
+  addSupplierDoc,
+  updateSupplierDoc
 } from './firebase/dbService';
 import { subscribeAuth, logoutUser } from './firebase/authService';
 
@@ -40,6 +43,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Authentication & Session Mode states
   // 'guest': masuk langsung tanpa login, data tergabung dalam 1 database bersama
@@ -259,6 +263,21 @@ export default function App() {
       await addTransactionDoc(newTrx);
     } catch (e) {
       console.error('Gagal menyimpan transaksi ke Firestore:', e);
+    }
+  };
+
+  const handleUpdateTransaction = async (updatedTrx: Transaction) => {
+    try {
+      await updateTransactionDoc({
+        ...updatedTrx,
+        userId: effectiveUserId,
+      });
+      // Jika receipt yang sedang dilihat adalah transaksi ini, perbarui juga
+      if (selectedReceipt && selectedReceipt.id === updatedTrx.id) {
+        setSelectedReceipt(updatedTrx);
+      }
+    } catch (e) {
+      console.error('Gagal memperbarui transaksi di Firestore:', e);
     }
   };
 
@@ -510,6 +529,7 @@ export default function App() {
                     transactions={transactions}
                     onViewAll={() => setActiveTab('history')}
                     onSelectTransaction={(trx) => setSelectedReceipt(trx)}
+                    onEditTransaction={(trx) => setEditingTransaction(trx)}
                     onDeleteTransaction={handleDeleteTransaction}
                     totalCount={transactions.length}
                   />
@@ -530,8 +550,10 @@ export default function App() {
                   transactions={transactions}
                   onSelectTransaction={(trx) => setSelectedReceipt(trx)}
                   onDeleteTransaction={handleDeleteTransaction}
+                  onUpdateTransaction={handleUpdateTransaction}
                   onExportCSV={handleExportCSV}
                   onOpenAddModal={() => setIsAddModalOpen(true)}
+                  availableSuppliers={availableSuppliers}
                 />
               )}
 
@@ -545,7 +567,10 @@ export default function App() {
                 <SuppliersView
                   suppliers={suppliers}
                   onAddSupplier={async (newSup) => {
-                    await addSupplierDoc(newSup);
+                    await addSupplierDoc({ ...newSup, userId: effectiveUserId });
+                  }}
+                  onUpdateSupplier={async (sup) => {
+                    await updateSupplierDoc({ ...sup, userId: effectiveUserId });
                   }}
                 />
               )}
@@ -571,10 +596,20 @@ export default function App() {
         availableSuppliers={availableSuppliers}
       />
 
+      {/* Edit Transaction Modal */}
+      <EditTransactionModal
+        isOpen={Boolean(editingTransaction)}
+        transaction={editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        onSave={handleUpdateTransaction}
+        availableSuppliers={availableSuppliers}
+      />
+
       {/* Receipt Detail Modal */}
       <ReceiptDetailModal
         transaction={selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
+        onEdit={(trx) => setEditingTransaction(trx)}
       />
     </div>
   );

@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Eye,
   Trash2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil
 } from 'lucide-react';
 import { Transaction } from '../types';
 import {
@@ -24,6 +25,7 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   onViewAll: () => void;
   onSelectTransaction: (trx: Transaction) => void;
+  onEditTransaction?: (trx: Transaction) => void;
   onDeleteTransaction?: (id: string) => void;
   totalCount: number;
 }
@@ -32,6 +34,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
   transactions,
   onViewAll,
   onSelectTransaction,
+  onEditTransaction,
   onDeleteTransaction,
   totalCount = 31,
 }) => {
@@ -239,10 +242,19 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center space-x-1.5">
+                        {onEditTransaction && (
+                          <button
+                            onClick={() => onEditTransaction(trx)}
+                            title="Edit Transaksi Belanja"
+                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => onSelectTransaction(trx)}
                           title="Lihat Nota / Invoice"
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
@@ -250,7 +262,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                           <button
                             onClick={() => onDeleteTransaction(trx.id)}
                             title="Pindahkan ke Sampah"
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -269,11 +281,11 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
       <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          Seluruh data pengeluaran tersinkronisasi otomatis dengan file lokal
+          Seluruh data pengeluaran tersinkronisasi otomatis dengan aman
         </span>
         <button
           onClick={onViewAll}
-          className="text-blue-600 hover:text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"
+          className="text-blue-600 hover:text-blue-700 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
         >
           Lihat semua {totalCount} riwayat &rarr;
         </button>

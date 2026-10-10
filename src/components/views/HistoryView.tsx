@@ -9,7 +9,8 @@ import {
   Eye,
   Trash2,
   ArrowUpDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil
 } from 'lucide-react';
 import { Transaction, CategoryType } from '../../types';
 import {
@@ -17,22 +18,28 @@ import {
   getCategoryBadgeStyle,
   getStatusBadgeStyle
 } from '../../utils/formatters';
+import { EditTransactionModal } from '../EditTransactionModal';
 
 interface HistoryViewProps {
   transactions: Transaction[];
   onSelectTransaction: (trx: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
+  onUpdateTransaction?: (trx: Transaction) => Promise<void> | void;
   onExportCSV: () => void;
   onOpenAddModal: () => void;
+  availableSuppliers?: string[];
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
   transactions,
   onSelectTransaction,
   onDeleteTransaction,
+  onUpdateTransaction,
   onExportCSV,
   onOpenAddModal,
+  availableSuppliers = [],
 }) => {
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -249,16 +256,23 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     >
                       <div className="flex items-center justify-center space-x-1">
                         <button
+                          onClick={() => setEditingTransaction(trx)}
+                          title="Edit Transaksi"
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => onSelectTransaction(trx)}
                           title="Lihat Nota"
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => onDeleteTransaction(trx.id)}
                           title="Hapus"
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -271,6 +285,20 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Modal Edit Transaksi Pembelian */}
+      <EditTransactionModal
+        isOpen={Boolean(editingTransaction)}
+        transaction={editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        onSave={async (updated) => {
+          if (onUpdateTransaction) {
+            await onUpdateTransaction(updated);
+          }
+          setEditingTransaction(null);
+        }}
+        availableSuppliers={availableSuppliers}
+      />
     </div>
   );
 };
