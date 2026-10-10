@@ -557,7 +557,12 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'analytics' && <AnalyticsView />}
+              {activeTab === 'analytics' && (
+                <AnalyticsView
+                  transactions={transactions}
+                  onExportCSV={handleExportCSV}
+                />
+              )}
 
               {activeTab === 'ingredients' && (
                 <IngredientSearchView ingredients={ingredients} />
