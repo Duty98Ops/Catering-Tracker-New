@@ -20,6 +20,7 @@ import { SuppliersView } from './components/views/SuppliersView';
 import { TrashView } from './components/views/TrashView';
 
 import { Menu, X, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import {
   subscribeToTransactions,
   subscribeToAllTransactions,
@@ -409,7 +410,12 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans antialiased text-slate-800">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+      className="flex h-screen bg-slate-50 overflow-hidden font-sans antialiased text-slate-800"
+    >
       {/* Mobile Sidebar Backdrop */}
       {isMobileSidebarOpen && (
         <div
@@ -616,6 +622,6 @@ export default function App() {
         onClose={() => setSelectedReceipt(null)}
         onEdit={(trx) => setEditingTransaction(trx)}
       />
-    </div>
+    </motion.div>
   );
 }

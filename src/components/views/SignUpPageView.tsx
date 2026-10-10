@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   ChefHat,
   Sparkles,
@@ -16,8 +16,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Users,
-  CheckCircle2,
-  Archive,
   BarChart3
 } from 'lucide-react';
 import { loginWithGoogle, registerWithEmail } from '../../firebase/authService';
@@ -27,6 +25,7 @@ import { MagneticButton } from '../auth/MagneticButton';
 import { AnimatedChartPreview } from '../auth/AnimatedChartPreview';
 import { RadarStatusBadge } from '../auth/RadarStatusBadge';
 import { NeonInput } from '../auth/NeonInput';
+import { PortalTransitionOverlay } from '../auth/PortalTransitionOverlay';
 
 interface SignUpPageViewProps {
   onSelectGuest: () => void;
@@ -51,16 +50,9 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // State untuk Klimaks Animasi Transisi Sukses (Fullscreen Morphing)
+  // State untuk Portal Transisi Sinematik Fullscreen
   const [isSuccessExiting, setIsSuccessExiting] = useState(false);
-
-  // Trigger transisi sukses sinematik
-  const triggerSuccessSequence = () => {
-    setIsSuccessExiting(true);
-    setTimeout(() => {
-      onAuthSuccess();
-    }, 850);
-  };
+  const [exitTarget, setExitTarget] = useState<'account' | 'guest'>('account');
 
   // Password strength calculation
   const passwordStrength = useMemo(() => {
@@ -81,7 +73,8 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
     setErrorMessage(null);
     try {
       await loginWithGoogle();
-      triggerSuccessSequence();
+      setExitTarget('account');
+      setIsSuccessExiting(true);
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -117,7 +110,8 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
 
     try {
       await registerWithEmail(email, password, name, businessName);
-      triggerSuccessSequence();
+      setExitTarget('account');
+      setIsSuccessExiting(true);
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
@@ -132,10 +126,8 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
   };
 
   const handleGuestSignUp = () => {
+    setExitTarget('guest');
     setIsSuccessExiting(true);
-    setTimeout(() => {
-      onSelectGuest();
-    }, 750);
   };
 
   return (
@@ -148,9 +140,13 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
       {/* Main Container Card: Smooth Satin Entrance */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
+        animate={{
+          opacity: isSuccessExiting ? 0.15 : 1,
+          scale: isSuccessExiting ? 0.95 : 1,
+          filter: isSuccessExiting ? 'blur(6px)' : 'blur(0px)',
+        }}
         transition={{
-          duration: 0.8,
+          duration: 0.6,
           ease: [0.16, 1, 0.3, 1],
         }}
         className="w-full max-w-5xl bg-[#0B132B]/95 rounded-3xl border border-slate-800/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] backdrop-blur-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10"
@@ -158,19 +154,7 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
         {/* ======================================================== */}
         {/* 1. LEFT BRANDING PANEL (approx 43% = 5/12 cols)          */}
         {/* ======================================================== */}
-        <motion.div
-          animate={
-            isSuccessExiting
-              ? {
-                  zIndex: 50,
-                  gridColumn: 'span 12 / span 12',
-                  backgroundColor: '#080D1C',
-                }
-              : {}
-          }
-          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-5 bg-gradient-to-b from-[#0A1128] via-[#080D1C] to-[#0D1836] p-7 sm:p-9 lg:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/70 relative overflow-hidden"
-        >
+        <div className="lg:col-span-5 bg-gradient-to-b from-[#0A1128] via-[#080D1C] to-[#0D1836] p-7 sm:p-9 lg:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/70 relative overflow-hidden">
           {/* 3D Interactive Mesh / Particle Field Canvas */}
           <ParticleMeshCanvas particleCount={48} />
 
@@ -311,295 +295,269 @@ export const SignUpPageView: React.FC<SignUpPageViewProps> = ({
             <span>Cost Intelligence untuk Usaha Catering</span>
             <RadarStatusBadge label="Sistem Aktif" />
           </div>
-
-          {/* Fullscreen Morphing Success State Overlay */}
-          <AnimatePresence>
-            {isSuccessExiting && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#080D1C] p-6 text-center"
-              >
-                <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#2563FF] to-[#22D3EE] flex items-center justify-center text-white shadow-[0_0_40px_rgba(37,99,255,0.8)] animate-bounce mb-4">
-                  <CheckCircle2 className="w-9 h-9" />
-                </div>
-                <h3 className="text-xl font-extrabold text-white tracking-tight">
-                  Pendaftaran Berhasil
-                </h3>
-                <p className="text-xs text-sky-300 mt-1.5 font-medium">
-                  Menyiapkan ruang kerja baru katering Anda...
-                </p>
-                <div className="mt-5 w-36 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-[#2563FF] to-[#22D3EE]"
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 0.75, ease: 'easeInOut' }}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        </div>
 
         {/* ======================================================== */}
         {/* 2. RIGHT SIGN UP PANEL (approx 57% = 7/12 cols)          */}
         {/* ======================================================== */}
-        <AnimatePresence>
-          {!isSuccessExiting && (
-            <motion.div
-              initial={{ x: 30, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0, scale: 0.95 }}
-              transition={{
-                duration: 0.7,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="lg:col-span-7 bg-[#FFFFFF] text-slate-800 p-7 sm:p-10 lg:p-12 flex flex-col justify-between"
-            >
+        <div className="lg:col-span-7 bg-[#FFFFFF] text-slate-800 p-7 sm:p-10 lg:p-12 flex flex-col justify-between">
+          <div>
+            {/* Header with Switch to Login */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
               <div>
-                {/* Header with Switch to Login */}
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-2">
-                      <Sparkles className="w-3 h-3 text-[#2563FF]" /> Registrasi Ruang Kerja
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 mb-2">
+                  <Sparkles className="w-3 h-3 text-[#2563FF]" /> Registrasi Ruang Kerja
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  Daftar Akun Baru
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  Siapkan ruang kerja Anda dan mulai kelola biaya catering dengan lebih teratur.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={onNavigateToLogin}
+                className="shrink-0 text-xs font-bold text-[#2563FF] hover:text-[#1D4ED8] hover:underline cursor-pointer inline-flex items-center gap-1 pt-1"
+              >
+                <span>Sudah punya akun? Masuk</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Error Feedback Banner */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3.5 bg-red-50/90 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2.5 shadow-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <span className="leading-relaxed font-medium">{errorMessage}</span>
+              </motion.div>
+            )}
+
+            {/* Google Sign-Up Button */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleGoogleSignUp}
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-300 hover:border-slate-400 rounded-xl text-xs sm:text-[13px] font-bold text-slate-700 shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Daftar dengan Google</span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center my-4">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider relative">
+                atau isi formulir pendaftaran
+              </span>
+            </div>
+
+            {/* Registration Form with Neon Inputs */}
+            <form onSubmit={handleEmailSignUp} className="space-y-3.5">
+              {/* Row 1: Nama Lengkap & Nama Usaha */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NeonInput
+                  label="Nama Lengkap"
+                  type="text"
+                  required
+                  placeholder="Masukkan nama lengkap"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  icon={<User className="w-4 h-4" />}
+                  autoComplete="name"
+                />
+
+                <NeonInput
+                  label="Nama Usaha (Opsional)"
+                  type="text"
+                  placeholder="Contoh: Catering Nusantara"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  icon={<Building2 className="w-4 h-4" />}
+                  autoComplete="organization"
+                />
+              </div>
+
+              {/* Email */}
+              <NeonInput
+                label="Email"
+                type="email"
+                required
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                icon={<Mail className="w-4 h-4" />}
+                autoComplete="email"
+              />
+
+              {/* Kata Sandi & Strength Indicator */}
+              <div>
+                <NeonInput
+                  label="Kata Sandi"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Minimal 6 karakter"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  icon={<Lock className="w-4 h-4" />}
+                  autoComplete="new-password"
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md transition-colors cursor-pointer"
+                      title={showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  }
+                />
+
+                {/* Password Strength Meter */}
+                {password && (
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          passwordStrength.score >= 1 ? passwordStrength.color : 'bg-transparent'
+                        }`}
+                        style={{ width: '100%' }}
+                      />
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                      Daftar Akun Baru
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                      Siapkan ruang kerja Anda dan mulai kelola biaya catering dengan lebih teratur.
-                    </p>
+                    <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          passwordStrength.score >= 2 ? passwordStrength.color : 'bg-transparent'
+                        }`}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          passwordStrength.score >= 3 ? passwordStrength.color : 'bg-transparent'
+                        }`}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 pl-1">
+                      {passwordStrength.label}
+                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={onNavigateToLogin}
-                    className="shrink-0 text-xs font-bold text-[#2563FF] hover:text-[#1D4ED8] hover:underline cursor-pointer inline-flex items-center gap-1 pt-1"
-                  >
-                    <span>Sudah punya akun? Masuk</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Error Feedback Banner */}
-                {errorMessage && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 p-3.5 bg-red-50/90 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2.5 shadow-xs"
-                  >
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                    <span className="leading-relaxed font-medium">{errorMessage}</span>
-                  </motion.div>
                 )}
-
-                {/* Google Sign-Up Button */}
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleGoogleSignUp}
-                  className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-300 hover:border-slate-400 rounded-xl text-xs sm:text-[13px] font-bold text-slate-700 shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  <span>Daftar dengan Google</span>
-                </button>
-
-                {/* Divider */}
-                <div className="relative flex items-center justify-center my-4">
-                  <div className="border-t border-slate-200 w-full" />
-                  <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider relative">
-                    atau isi formulir pendaftaran
-                  </span>
-                </div>
-
-                {/* Registration Form with Neon Inputs */}
-                <form onSubmit={handleEmailSignUp} className="space-y-3.5">
-                  {/* Row 1: Nama Lengkap & Nama Usaha */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <NeonInput
-                      label="Nama Lengkap"
-                      type="text"
-                      required
-                      placeholder="Masukkan nama lengkap"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      icon={<User className="w-4 h-4" />}
-                      autoComplete="name"
-                    />
-
-                    <NeonInput
-                      label="Nama Usaha (Opsional)"
-                      type="text"
-                      placeholder="Contoh: Catering Nusantara"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      icon={<Building2 className="w-4 h-4" />}
-                      autoComplete="organization"
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <NeonInput
-                    label="Email"
-                    type="email"
-                    required
-                    placeholder="nama@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    icon={<Mail className="w-4 h-4" />}
-                    autoComplete="email"
-                  />
-
-                  {/* Kata Sandi & Strength Indicator */}
-                  <div>
-                    <NeonInput
-                      label="Kata Sandi"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Minimal 6 karakter"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      icon={<Lock className="w-4 h-4" />}
-                      autoComplete="new-password"
-                      rightElement={
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="p-1 text-slate-400 hover:text-slate-700 rounded-md transition-colors cursor-pointer"
-                          title={showPassword ? 'Sembunyikan' : 'Tampilkan'}
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      }
-                    />
-
-                    {/* Password Strength Meter */}
-                    {password && (
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              passwordStrength.score >= 1 ? passwordStrength.color : 'bg-transparent'
-                            }`}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                        <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              passwordStrength.score >= 2 ? passwordStrength.color : 'bg-transparent'
-                            }`}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                        <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              passwordStrength.score >= 3 ? passwordStrength.color : 'bg-transparent'
-                            }`}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-500 pl-1">
-                          {passwordStrength.label}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Konfirmasi Kata Sandi */}
-                  <div>
-                    <NeonInput
-                      label="Konfirmasi Kata Sandi"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Masukkan kembali kata sandi"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      icon={<Lock className="w-4 h-4" />}
-                      autoComplete="new-password"
-                      rightElement={
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="p-1 text-slate-400 hover:text-slate-700 rounded-md transition-colors cursor-pointer"
-                          title={showConfirmPassword ? 'Sembunyikan' : 'Tampilkan'}
-                        >
-                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      }
-                    />
-                    {confirmPassword && password !== confirmPassword && (
-                      <p className="text-[11px] text-rose-500 font-medium mt-1">
-                        Konfirmasi kata sandi belum cocok.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Magnetic Button: "Buat Akun" */}
-                  <MagneticButton
-                    type="submit"
-                    disabled={loading}
-                    className="w-full mt-3 py-3 px-4 bg-[#2563FF] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Mendaftarkan Ruang Kerja...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Buat Akun Sekarang</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </MagneticButton>
-                </form>
               </div>
 
-              {/* Guest alternative & Footer */}
-              <div className="mt-5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-                <button
-                  type="button"
-                  onClick={handleGuestSignUp}
-                  className="text-sky-700 hover:text-sky-900 font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:underline"
-                >
-                  <Users className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Atau coba dulu sebagai Tamu (Ruang Kerja Bersama)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onNavigateToLogin}
-                  className="text-[#2563FF] hover:text-[#1D4ED8] font-bold cursor-pointer hover:underline"
-                >
-                  Sudah punya akun? Masuk
-                </button>
+              {/* Konfirmasi Kata Sandi */}
+              <div>
+                <NeonInput
+                  label="Konfirmasi Kata Sandi"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Masukkan kembali kata sandi"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  icon={<Lock className="w-4 h-4" />}
+                  autoComplete="new-password"
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md transition-colors cursor-pointer"
+                      title={showConfirmPassword ? 'Sembunyikan' : 'Tampilkan'}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  }
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-[11px] text-rose-500 font-medium mt-1">
+                    Konfirmasi kata sandi belum cocok.
+                  </p>
+                )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Magnetic Button: "Buat Akun" */}
+              <MagneticButton
+                type="submit"
+                disabled={loading}
+                className="w-full mt-3 py-3 px-4 bg-[#2563FF] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Mendaftarkan Ruang Kerja...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Buat Akun Sekarang</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </MagneticButton>
+            </form>
+          </div>
+
+          {/* Guest alternative & Footer */}
+          <div className="mt-5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+            <button
+              type="button"
+              onClick={handleGuestSignUp}
+              className="text-sky-700 hover:text-sky-900 font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:underline"
+            >
+              <Users className="w-3.5 h-3.5 text-sky-600" />
+              <span>Atau coba dulu sebagai Tamu (Ruang Kerja Bersama)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onNavigateToLogin}
+              className="text-[#2563FF] hover:text-[#1D4ED8] font-bold cursor-pointer hover:underline"
+            >
+              Sudah punya akun? Masuk
+            </button>
+          </div>
+        </div>
       </motion.div>
+
+      {/* FULLSCREEN CINEMATIC PORTAL TRANSITION OVERLAY */}
+      <PortalTransitionOverlay
+        isVisible={isSuccessExiting}
+        title={exitTarget === 'guest' ? 'Sesi Tamu Diaktifkan' : 'Pendaftaran Berhasil'}
+        subtitle={
+          exitTarget === 'guest'
+            ? 'Menyiapkan akses ruang kerja bersama demo...'
+            : 'Menyiapkan ruang kerja baru katering Anda...'
+        }
+        onTransitionComplete={() => {
+          if (exitTarget === 'guest') {
+            onSelectGuest();
+          } else {
+            onAuthSuccess();
+          }
+        }}
+      />
     </div>
   );
 };
