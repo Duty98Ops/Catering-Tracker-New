@@ -9,13 +9,15 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { handleFirestoreError, OperationType } from './errorHandler';
-import { Transaction, Supplier, IngredientBenchmark } from '../types';
+import { Transaction, Supplier, IngredientBenchmark, Recipe } from '../types';
 import { INITIAL_TRANSACTIONS, INITIAL_SUPPLIERS, INGREDIENT_BENCHMARKS } from '../data/initialData';
+import { INITIAL_GUEST_RECIPES } from '../data/initialRecipes';
 
 const TRANSACTIONS_PATH = 'transactions';
 const TRASH_PATH = 'trash';
 const SUPPLIERS_PATH = 'suppliers';
 const INGREDIENTS_PATH = 'ingredients';
+const RECIPES_PATH = 'recipes';
 
 // Subscribe to suppliers collection with user isolation
 export function subscribeToSuppliers(
@@ -73,6 +75,121 @@ export async function deleteSupplierDoc(id: string) {
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${SUPPLIERS_PATH}/${id}`);
+  }
+}
+
+function sanitizeRecipeForFirestore(recipe: Recipe): Record<string, unknown> {
+  const cleanIngredients = (recipe.ingredients || []).map((ing) => {
+    const cleanIng: Record<string, unknown> = {
+      id: ing.id,
+      name: ing.name,
+      qty: Number(ing.qty) || 0,
+      unit: ing.unit || 'gr',
+      priceSourceMode: ing.priceSourceMode || 'auto',
+    };
+    if (ing.linkedTransactionItem && ing.linkedTransactionItem.trim()) {
+      cleanIng.linkedTransactionItem = ing.linkedTransactionItem.trim();
+    }
+    if (typeof ing.manualPricePerUnit === 'number' && !Number.isNaN(ing.manualPricePerUnit)) {
+      cleanIng.manualPricePerUnit = ing.manualPricePerUnit;
+    }
+    return cleanIng;
+  });
+
+  const payload: Record<string, unknown> = {
+    id: recipe.id,
+    userId: recipe.userId || 'guest',
+    name: recipe.name,
+    category: recipe.category || 'Nasi Box',
+    portions: Number(recipe.portions) > 0 ? Number(recipe.portions) : 1,
+    targetMargin: Number(recipe.targetMargin) || 0,
+    sellingPrice: Number(recipe.sellingPrice) || 0,
+    packagingCostPerPortion: Number(recipe.packagingCostPerPortion) || 0,
+    ingredients: cleanIngredients,
+    updatedAt: recipe.updatedAt || new Date().toISOString().split('T')[0],
+  };
+
+  if (recipe.notes && recipe.notes.trim()) {
+    payload.notes = recipe.notes.trim();
+  }
+
+  return payload;
+}
+
+// Subscribe to recipes collection with strict user isolation
+export function subscribeToRecipes(
+  targetUserId: string = 'guest',
+  onData: (items: Recipe[]) => void
+) {
+  try {
+    const colRef = collection(db, RECIPES_PATH);
+    return onSnapshot(
+      colRef,
+      async (snapshot) => {
+        if (snapshot.empty) {
+          if (targetUserId === 'guest') {
+            try {
+              const batch = writeBatch(db);
+              INITIAL_GUEST_RECIPES.forEach((rcp) => {
+                const docRef = doc(db, RECIPES_PATH, rcp.id);
+                batch.set(docRef, sanitizeRecipeForFirestore({ ...rcp, userId: 'guest' }));
+              });
+              await batch.commit();
+            } catch (seedErr) {
+              console.warn('Recipe seeding failed, using local initial guest recipes:', seedErr);
+              onData(INITIAL_GUEST_RECIPES);
+            }
+          } else {
+            onData([]);
+          }
+          return;
+        }
+
+        const allItems: Recipe[] = [];
+        snapshot.forEach((d) => {
+          allItems.push(d.data() as Recipe);
+        });
+
+        const items =
+          targetUserId === 'guest'
+            ? allItems.filter((r) => !r.userId || r.userId === 'guest')
+            : allItems.filter((r) => r.userId === targetUserId);
+
+        onData(items);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, RECIPES_PATH);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, RECIPES_PATH);
+  }
+}
+
+export async function addRecipeDoc(recipe: Recipe) {
+  const docRef = doc(db, RECIPES_PATH, recipe.id);
+  try {
+    await setDoc(docRef, sanitizeRecipeForFirestore(recipe));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `${RECIPES_PATH}/${recipe.id}`);
+  }
+}
+
+export async function updateRecipeDoc(recipe: Recipe) {
+  const docRef = doc(db, RECIPES_PATH, recipe.id);
+  try {
+    await setDoc(docRef, sanitizeRecipeForFirestore(recipe), { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${RECIPES_PATH}/${recipe.id}`);
+  }
+}
+
+export async function deleteRecipeDoc(id: string) {
+  const docRef = doc(db, RECIPES_PATH, id);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${RECIPES_PATH}/${id}`);
   }
 }
 
@@ -335,12 +452,31 @@ export async function resetFirestoreToDemo(targetUserId: string = 'guest') {
     }
   });
 
-  // Add initial transactions ONLY for guest mode. Personal accounts reset to empty (0 transactions).
+  // Clear recipes matching targetUserId
+  const recipeSnap = await getDocs(collection(db, RECIPES_PATH));
+  recipeSnap.forEach((d) => {
+    const data = d.data();
+    if (targetUserId === 'guest') {
+      if (!data.userId || data.userId === 'guest') {
+        batch.delete(d.ref);
+      }
+    } else {
+      if (data.userId === targetUserId) {
+        batch.delete(d.ref);
+      }
+    }
+  });
+
+  // Add initial transactions & starter recipes ONLY for guest mode. Personal accounts reset to empty.
   if (targetUserId === 'guest') {
     INITIAL_TRANSACTIONS.forEach((trx) => {
       const docId = trx.id;
       const docRef = doc(db, TRANSACTIONS_PATH, docId);
       batch.set(docRef, { ...trx, id: docId, userId: 'guest' });
+    });
+    INITIAL_GUEST_RECIPES.forEach((rcp) => {
+      const docRef = doc(db, RECIPES_PATH, rcp.id);
+      batch.set(docRef, sanitizeRecipeForFirestore({ ...rcp, userId: 'guest' }));
     });
   }
 

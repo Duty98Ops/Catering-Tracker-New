@@ -54,3 +54,30 @@ export interface IngredientBenchmark {
   lastUpdated: string;
   note: string;
 }
+
+export type RecipeUnit = 'gr' | 'kg' | 'ml' | 'liter' | 'pcs';
+
+export interface RecipeIngredient {
+  id: string;
+  name: string;
+  qty: number;
+  unit: RecipeUnit;
+  linkedTransactionItem?: string;
+  manualPricePerUnit?: number;
+  priceSourceMode?: 'auto' | 'manual';
+}
+
+export interface Recipe {
+  id: string;
+  userId?: string;
+  name: string;
+  category: string;
+  portions: number;
+  targetMargin: number;
+  sellingPrice: number;
+  packagingCostPerPortion?: number;
+  notes?: string;
+  ingredients: RecipeIngredient[];
+  updatedAt?: string;
+}
+

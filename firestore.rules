@@ -45,6 +45,19 @@ service cloud.firestore {
         && (!('transactionCount' in data) || (data.transactionCount is number && data.transactionCount >= 0));
     }
 
+    function isValidRecipe(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.portions is number && data.portions > 0
+        && data.targetMargin is number && data.targetMargin >= 0 && data.targetMargin <= 95
+        && data.sellingPrice is number && data.sellingPrice >= 0
+        && data.ingredients is list && data.ingredients.size() <= 100
+        && (!('category' in data) || (data.category is string && data.category.size() <= 100))
+        && (!('packagingCostPerPortion' in data) || (data.packagingCostPerPortion is number && data.packagingCostPerPortion >= 0))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 30))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
     // Connection test document
     match /test/connection {
       allow read: if true;
@@ -84,6 +97,14 @@ service cloud.firestore {
     match /ingredients/{ingredientId} {
       allow get, list: if true;
       allow create, update, delete: if isValidId(ingredientId);
+    }
+
+    // Recipes Collection (Master Resep & Kalkulator HPP)
+    match /recipes/{recipeId} {
+      allow get, list: if true;
+      allow create: if isValidId(recipeId) && isValidRecipe(incoming());
+      allow update: if isValidId(recipeId) && isValidRecipe(incoming());
+      allow delete: if isValidId(recipeId);
     }
   }
 }

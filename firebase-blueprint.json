@@ -54,6 +54,25 @@
         "note": { "type": "string", "maxLength": 500, "description": "Catatan kondisi pasar" }
       },
       "required": ["name", "currentPrice", "unit"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Master resep menu katering beserta komposisi bahan untuk kalkulasi HPP dinamis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID unik resep" },
+        "userId": { "type": "string", "maxLength": 128, "description": "ID pemilik: 'guest' atau UID akun pribadi" },
+        "name": { "type": "string", "maxLength": 200, "description": "Nama menu atau paket katering" },
+        "category": { "type": "string", "maxLength": 100, "description": "Kategori menu (Nasi Box, Prasmanan, dll)" },
+        "portions": { "type": "number", "description": "Jumlah porsi hasil resep" },
+        "targetMargin": { "type": "number", "description": "Target margin keuntungan kotor (%)" },
+        "sellingPrice": { "type": "number", "description": "Harga jual aktual per porsi (Rp)" },
+        "packagingCostPerPortion": { "type": "number", "description": "Biaya tambahan kemasan per porsi (Rp)" },
+        "notes": { "type": "string", "maxLength": 500, "description": "Catatan resep dapur" },
+        "ingredients": { "type": "array", "description": "Daftar komposisi bahan baku resep" },
+        "updatedAt": { "type": "string", "description": "Tanggal pembaruan terakhir" }
+      },
+      "required": ["name", "portions", "targetMargin", "ingredients"]
     }
   },
   "firestore": {
@@ -72,6 +91,10 @@
     "/ingredients/{ingredientId}": {
       "schema": "IngredientBenchmark",
       "description": "Koleksi data benchmark harga bahan pasar"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Koleksi master resep dan kalkulator HPP dinamis katering"
     }
   }
 }

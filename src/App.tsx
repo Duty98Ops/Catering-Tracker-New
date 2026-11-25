@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Transaction, CategoryType, Supplier, IngredientBenchmark } from './types';
+import { Transaction, CategoryType, Supplier, IngredientBenchmark, Recipe } from './types';
 import { Sidebar, NavItemKey } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { SummaryCards } from './components/SummaryCards';
@@ -15,6 +15,7 @@ import { AuthPageView } from './components/views/AuthPageView';
 import { InputExpenseView } from './components/views/InputExpenseView';
 import { HistoryView } from './components/views/HistoryView';
 import { AnalyticsView } from './components/views/AnalyticsView';
+import { RecipesView } from './components/views/RecipesView';
 import { IngredientSearchView } from './components/views/IngredientSearchView';
 import { SuppliersView } from './components/views/SuppliersView';
 import { TrashView } from './components/views/TrashView';
@@ -36,7 +37,11 @@ import {
   resetFirestoreToDemo,
   addSupplierDoc,
   updateSupplierDoc,
-  deleteSupplierDoc
+  deleteSupplierDoc,
+  subscribeToRecipes,
+  addRecipeDoc,
+  updateRecipeDoc,
+  deleteRecipeDoc
 } from './firebase/dbService';
 import { subscribeAuth, logoutUser } from './firebase/authService';
 
@@ -74,6 +79,7 @@ export default function App() {
   const [allRawTransactions, setAllRawTransactions] = useState<Transaction[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [ingredients, setIngredients] = useState<IngredientBenchmark[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [trashItems, setTrashItems] = useState<Transaction[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
 
@@ -129,12 +135,17 @@ export default function App() {
       setIngredients(items);
     });
 
+    const unsubRec = subscribeToRecipes(effectiveUserId, (items) => {
+      setRecipes(items);
+    });
+
     return () => {
       unsubTrx?.();
       unsubAll?.();
       unsubTrash?.();
       unsubSup?.();
       unsubIng?.();
+      unsubRec?.();
     };
   }, [effectiveUserId, authInitialized]);
 
@@ -568,6 +579,23 @@ export default function App() {
                 <AnalyticsView
                   transactions={transactions}
                   onExportCSV={handleExportCSV}
+                />
+              )}
+
+              {activeTab === 'recipes' && (
+                <RecipesView
+                  recipes={recipes}
+                  transactions={transactions}
+                  ingredients={ingredients}
+                  onAddRecipe={async (newRecipe) => {
+                    await addRecipeDoc({ ...newRecipe, userId: effectiveUserId });
+                  }}
+                  onUpdateRecipe={async (updatedRecipe) => {
+                    await updateRecipeDoc({ ...updatedRecipe, userId: effectiveUserId });
+                  }}
+                  onDeleteRecipe={async (recipeId) => {
+                    await deleteRecipeDoc(recipeId);
+                  }}
                 />
               )}
 

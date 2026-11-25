@@ -8,6 +8,7 @@ import {
   Users,
   Trash2,
   ChefHat,
+  UtensilsCrossed,
   Download,
   Upload,
   RefreshCw,
@@ -24,6 +25,7 @@ export type NavItemKey =
   | 'input'
   | 'history'
   | 'analytics'
+  | 'recipes'
   | 'ingredients'
   | 'suppliers'
   | 'trash';
@@ -79,6 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'analytics' as NavItemKey,
       label: 'Analitik & Laporan',
       icon: BarChart3,
+    },
+    {
+      id: 'recipes' as NavItemKey,
+      label: 'Master Resep & HPP',
+      icon: UtensilsCrossed,
     },
     {
       id: 'ingredients' as NavItemKey,
